@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:SmailAvalonia.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SmailAvalonia.Views.PayloadSummaryControl"
+             x:DataType="vm:PayloadSummaryViewModel">
+  <Grid Width="800" VerticalAlignment="Center" HorizontalAlignment="Center">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/>
+    </Grid.ColumnDefinitions>
+
+    <Label Grid.Row="0" Grid.Column="0" Content="Summary" HorizontalAlignment="Center"/>
+
+    <Label Grid.Row="1" Grid.Column="0" Content="Message:"/>
+    <Border Grid.Row="2" Grid.Column="0" BorderBrush="White" BorderThickness="1" CornerRadius="5">
+      <TextBlock Text="{Binding Payload.Message}"
+                 TextWrapping="Wrap" Height="200"/>
+    </Border>
+
+    <Label Grid.Row="3" Grid.Column="0" Content="Recipients:"/>
+    <Grid Grid.Row="4" Grid.Column="0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Label Content="{Binding SmsContactsSentence}"/>
+        <Label Content="SMS" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Label Content="{Binding EmailContactsSentence}"/>
+        <Label Content="Email" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+      </StackPanel>
+    </Grid>
+
+    <StackPanel Grid.Row="5" Grid.Column="0" Orientation="Horizontal">
+      <Label Content="The execution is estimated to take"/>
+      <Label Content="{Binding EstimatedTimeForExecution}"/>
+      <Label Content="seconds"/>
+    </StackPanel>
+    
+    <UniformGrid Grid.Row="6" Grid.Column="0" Columns="2">
+      <Button Content="Back" HorizontalAlignment="Left" Command="{Binding BackToConfigurationCommand}"/>
+      <Button Content="Send" HorizontalAlignment="Right" Command="{Binding ExecutePayloadCommand}"/>
+    </UniformGrid>
+  </Grid>
+</UserControl>
