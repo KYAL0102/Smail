@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SmailAvalonia.Views.RecepientConfiguration"
+             xmlns:vm="using:SmailAvalonia.ViewModels"
+             x:DataType="vm:RecepientConfigurationViewModel">
+  
+  <Grid Width="800" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/>
+    </Grid.ColumnDefinitions>
+
+    <Label Grid.Row="0" Grid.Column="0" Content="Recipients:"/>
+    <UniformGrid Grid.Row="1" Grid.Column="0" Columns="2">
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+        <Button Content="Upload multiple Contacts" Command="{Binding PickFileForImport}"/>
+        <Label Content="FileName.csv" VerticalAlignment="Center"/>
+      </StackPanel>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Button Grid.Row="0" Grid.Column="0" Content="Add contact" Command="{Binding AddSingleContactCommand}"/>
+        
+        <Label Grid.Row="0" Grid.Column="1" Content="Name: " VerticalAlignment="Center"/>
+        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding NewContactName, Mode=TwoWay}"/>
+        <Label Grid.Row="1" Grid.Column="1" Content="Mobile Number: " VerticalAlignment="Center"/>
+        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding NewContactMobileNumber, Mode=TwoWay}"/>
+        <Label Grid.Row="2" Grid.Column="1" Content="Email: " VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding NewContactEmail, Mode=TwoWay}"/>
+      </Grid>
+    </UniformGrid>
+
+    <DataGrid x:Name="baseElement" Grid.Row="2" Grid.Column="0" RowHeight="32" Height="200"
+              AutoGenerateColumns="False" IsReadOnly="True" ItemsSource="{Binding Contacts}" 
+              HeadersVisibility="All"
+              GridLinesVisibility="All">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
+        <DataGridTextColumn Header="Mobile Number" Binding="{Binding MobileNumber}"/>
+        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+
+        <DataGridTemplateColumn Header="" Width="Auto">
+            <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                    <Button
+                        Content="✕"
+                        Padding="4,0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Command="{Binding #baseElement.DataContext.RemoveContactCommand}"
+                        CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center">
+      <Button Content="← Prev" Command="{Binding PreviousBatchCommand}"/>
+      <Button Content="Next →" Command="{Binding NextBatchCommand}"/>
+    </StackPanel>
+
+    <UniformGrid Grid.Row="4" Grid.Column="0" Columns="2">
+      <Button Content="Back" HorizontalAlignment="Left" Command="{Binding OneStepBack}"/>
+      <Button Content="Continue" HorizontalAlignment="Right" Command="{Binding ContinueToMessageConfig}"/>
+    </UniformGrid>
+  </Grid>
+</UserControl>

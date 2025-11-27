@@ -96,7 +96,7 @@ public class PayloadSummaryViewModel: ViewModelBase
     private void BackToConfiguration()
     {
         Messenger.Publish(new Message{
-            Action = Globals.NavigateToPayloadConfigurationAction,
+            Action = Globals.NavigateToMessageConfigurationAction,
             Data = Payload
         });
     }

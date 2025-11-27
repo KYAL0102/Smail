@@ -9,9 +9,11 @@ namespace SmailAvalonia.ViewModels;
 public class PayloadExecutionViewModel: ViewModelBase
 {
     public MessagePayload Payload { get; init; }
-    public PayloadExecutionViewModel(MessagePayload payload)
+    private Session Session { get; init; }
+    public PayloadExecutionViewModel(Session session, MessagePayload payload)
     {
-        Payload = payload == null ? new() : payload;
+        Session = session;
+        Payload = payload;
     }
 
     public async Task InitializeDataAsync()
@@ -28,6 +30,6 @@ public class PayloadExecutionViewModel: ViewModelBase
         
         var message = Payload.Message;
 
-        await SmsService.Instance.SendMessageAsync(message, smsContacts);
+        await Session.SmsService.SendMessageAsync(message, smsContacts);
     }
 }

@@ -8,9 +8,45 @@ namespace SmailAvalonia.ViewModels;
 
 public class AuthenticationViewModel : ViewModelBase
 {
-    public RelayCommand StartMessageConfigurationCommand { get; init; }
-    public AuthenticationViewModel()
+    private MessagePayload? _payload = null;
+
+    private string _sgIp = string.Empty;
+    public string SgIP
     {
+        get => _sgIp;
+        set
+        {
+            _sgIp = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _sgUsrName = string.Empty;
+    public string SgUsername
+    {
+        get => _sgUsrName;
+        set
+        {
+            _sgUsrName = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _sgPwd = string.Empty;
+    public string SgPassword
+    {
+        get => _sgPwd;
+        set
+        {
+            _sgPwd = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public RelayCommand StartMessageConfigurationCommand { get; init; }
+    public AuthenticationViewModel(MessagePayload? payload = null)
+    {
+        _payload = payload;
         StartMessageConfigurationCommand = new(
             StartMessageConfiguration,
             () => true
@@ -24,10 +60,23 @@ public class AuthenticationViewModel : ViewModelBase
 
     private void StartMessageConfiguration()
     {
+        //TODO: Check if the IP is available and username + password are correct
+
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToPayloadConfigurationAction,
-            Data = new MessagePayload()
+            Action = Globals.NewSessionAction,
+            Data = new Session
+            {
+                SmsService = new(SgIP, SgUsername, SgPassword)
+            }
+        });
+        SgUsername = string.Empty;
+        SgPassword = string.Empty;
+
+        Messenger.Publish(new Message
+        {
+            Action = Globals.NavigateToRecepientConfigurationAction,
+            Data = _payload ?? new MessagePayload()
         });
     }
 }

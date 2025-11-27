@@ -10,7 +10,7 @@ namespace SmailAvalonia.Views;
 public partial class MessageConfigurationControl : UserControl
 {
     private MessageConfigurationViewModel _viewModel;
-    public MessageConfigurationControl(MessagePayload? payload = null)
+    public MessageConfigurationControl(MessagePayload payload)
     {
         InitializeComponent();
         _viewModel = new(this, payload);

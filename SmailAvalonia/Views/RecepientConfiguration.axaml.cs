@@ -8,14 +8,15 @@ using SmailAvalonia.ViewModels;
 
 namespace SmailAvalonia.Views;
 
-public partial class AuthenticationControl : UserControl
+public partial class RecepientConfiguration : UserControl
 {
-    private AuthenticationViewModel _viewModel;
-    public AuthenticationControl(MessagePayload? payload = null)
+    private RecepientConfigurationViewModel _viewModel;
+    public RecepientConfiguration(MessagePayload payload)
     {
         InitializeComponent();
-        _viewModel = new(payload);
+        _viewModel = new(this, payload);
         DataContext = _viewModel;
+
         Loaded += UserControl_Loaded;
     }
 

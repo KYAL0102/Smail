@@ -2,8 +2,10 @@
 
 public static class Globals
 {
-    public static string NavigateToAuthenticationAction { get; set; } = "authentication";
-    public static string NavigateToPayloadSummaryAction { get; set; } = "summary";
-    public static string NavigateToPayloadConfigurationAction { get; set; } = "config";
-    public static string NavigateToExecutionAction { get; set; } = "execution";
+    public static string NavigateToAuthenticationAction { get; } = "authentication";
+    public static string NavigateToPayloadSummaryAction { get; } = "summary";
+    public static string NavigateToMessageConfigurationAction { get; } = "textconfig";
+    public static string NavigateToRecepientConfigurationAction { get; } = "contactConfig";
+    public static string NavigateToExecutionAction { get; } = "execution";
+    public static string NewSessionAction { get; } = "newSession";
 }

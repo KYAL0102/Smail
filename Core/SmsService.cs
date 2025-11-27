@@ -8,16 +8,13 @@ namespace Core;
 
 public class SmsService
 {
-    private const string USERNAME = "admin";
-    private const string PASSWORD = "admin123";
-    private const string DEVICE_IP = "192.168.100.93";
+    private string AUTH_TOKEN;
+    private string DEVICE_IP;
     private const int PORT = 8080;
     private HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions;
-    private static SmsService? _smsService = null;
-    public static SmsService Instance => _smsService == null ? new() : _smsService;
 
-    public SmsService()
+    public SmsService(string ipAddress, string username, string password)
     {
         var handler = new HttpClientHandler
         {
@@ -30,9 +27,9 @@ public class SmsService
             WriteIndented = true
         };
 
-        // Set up basic authentication
-        var authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{USERNAME}:{PASSWORD}"));
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authToken);
+        DEVICE_IP = ipAddress;
+        AUTH_TOKEN = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", AUTH_TOKEN);
     }
 
     public async Task SendMessageAsync(string message, List<string> numbers)

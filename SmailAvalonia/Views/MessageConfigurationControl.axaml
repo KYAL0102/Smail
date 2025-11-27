@@ -11,10 +11,6 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*"/>
@@ -26,64 +22,9 @@
              Watermark="Write your message content here!"
              AcceptsReturn="True" TextWrapping="Wrap"/>
     
-    <Label Grid.Row="2" Content="Recipients:"/>
-    <UniformGrid Grid.Row="3" Grid.Column="0" Columns="2">
-      <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-        <Button Content="Upload multiple Contacts" Command="{Binding PickFileForImport}"/>
-        <Label Content="FileName.csv" VerticalAlignment="Center"/>
-      </StackPanel>
-      <Grid>
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/>
-          <ColumnDefinition Width="Auto"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-        <Button Grid.Row="0" Grid.Column="0" Content="Add contact" Command="{Binding AddSingleContactCommand}"/>
-        
-        <Label Grid.Row="0" Grid.Column="1" Content="Name: " VerticalAlignment="Center"/>
-        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding NewContactName, Mode=TwoWay}"/>
-        <Label Grid.Row="1" Grid.Column="1" Content="Mobile Number: " VerticalAlignment="Center"/>
-        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding NewContactMobileNumber, Mode=TwoWay}"/>
-        <Label Grid.Row="2" Grid.Column="1" Content="Email: " VerticalAlignment="Center"/>
-        <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding NewContactEmail, Mode=TwoWay}"/>
-      </Grid>
+    <UniformGrid Grid.Row="2" Grid.Column="0" Columns="2">
+      <Button Content="Back" HorizontalAlignment="Left" Command="{Binding OneStepBack}"/>
+      <Button Content="Continue" HorizontalAlignment="Right" Command="{Binding ContinueToSummaryCommand}"/>
     </UniformGrid>
-
-    <DataGrid x:Name="baseElement" Grid.Row="4" Grid.Column="0" RowHeight="32" Height="200"
-              AutoGenerateColumns="False" IsReadOnly="True" ItemsSource="{Binding Contacts}" 
-              HeadersVisibility="All"
-              GridLinesVisibility="All">
-      <DataGrid.Columns>
-        <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
-        <DataGridTextColumn Header="Mobile Number" Binding="{Binding MobileNumber}"/>
-        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
-
-        <DataGridTemplateColumn Header="" Width="Auto">
-            <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate>
-                    <Button
-                        Content="✕"
-                        Padding="4,0" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Command="{Binding #baseElement.DataContext.RemoveContactCommand}"
-                        CommandParameter="{Binding}" />
-                </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
-      </DataGrid.Columns>
-    </DataGrid>
-
-    <StackPanel Grid.Row="5" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center">
-      <Button Content="← Prev" Command="{Binding PreviousBatchCommand}"/>
-      <Button Content="Next →" Command="{Binding NextBatchCommand}"/>
-    </StackPanel>
-    
-    <Button Grid.Row="6" Grid.Column="0" HorizontalAlignment="Right" 
-            Content="Continue" Command="{Binding ContinueToSummaryCommand}"/>
   </Grid>
 </UserControl>

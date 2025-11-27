@@ -11,6 +11,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly Window? _window;
     private UserControl? _currentPage = null;
+    private Session? _currentSession { get; set; } = null;
     public UserControl? CurrentPage
     {
         get { return _currentPage; }
@@ -26,8 +27,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _window = window;
         CurrentPage = new AuthenticationControl();
         
-        Messenger.Subscribe(Globals.NavigateToAuthenticationAction, _ => throw new NotImplementedException());
-        Messenger.Subscribe(Globals.NavigateToPayloadConfigurationAction, message => NavigateToPayloadConfiguration(message.Data));
+        Messenger.Subscribe(Globals.NewSessionAction, message => AssignNewSession(message.Data));
+        Messenger.Subscribe(Globals.NavigateToAuthenticationAction, message => NavigateToAuthentication(message.Data));
+        Messenger.Subscribe(Globals.NavigateToMessageConfigurationAction, message => NavigateToPayloadConfiguration(message.Data));
+        Messenger.Subscribe(Globals.NavigateToRecepientConfigurationAction, message => NavigateToRecepientsConfiguration(message.Data));
         Messenger.Subscribe(Globals.NavigateToPayloadSummaryAction, message => NavigateToPayloadSummary(message.Data));
         Messenger.Subscribe(Globals.NavigateToExecutionAction, message => NavigateToExecution(message.Data));
     }
@@ -35,6 +38,21 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task InitializeDataAsync()
     {
         await Task.CompletedTask;
+    }
+
+    private void AssignNewSession(object? obj)
+    {
+        if(obj is Session session) _currentSession = session;
+    }
+
+    private void NavigateToAuthentication(object? data)
+    {
+        if (data is MessagePayload payload) CurrentPage = new AuthenticationControl(payload); 
+    }
+
+    private void NavigateToRecepientsConfiguration(object? obj)
+    {
+        if(obj is MessagePayload payload) CurrentPage = new RecepientConfiguration(payload);
     }
 
     private void NavigateToPayloadConfiguration(object? obj)
@@ -54,6 +72,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void NavigateToExecution(object? obj)
     {
-        if (obj is MessagePayload payload) CurrentPage = new PayloadExecutionControl(payload);
+        if (_currentSession == null ) return;
+        if (obj is MessagePayload payload) CurrentPage = new PayloadExecutionControl(_currentSession, payload);
     }
 }
