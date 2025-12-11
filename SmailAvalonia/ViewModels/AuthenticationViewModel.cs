@@ -21,6 +21,17 @@ public class AuthenticationViewModel : ViewModelBase
         }
     }
 
+    private string _sgPort = string.Empty;
+    public string SgPort
+    {
+        get => _sgPort;
+        set
+        {
+            _sgPort = value;
+            OnPropertyChanged();
+        }
+    }
+
     private string _sgUsrName = string.Empty;
     public string SgUsername
     {
@@ -48,7 +59,7 @@ public class AuthenticationViewModel : ViewModelBase
     {
         _payload = payload;
         StartMessageConfigurationCommand = new(
-            StartMessageConfiguration,
+            async() => await StartMessageConfiguration(),
             () => true
         );
     }
@@ -58,16 +69,30 @@ public class AuthenticationViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    private void StartMessageConfiguration()
+    private async Task StartMessageConfiguration()
     {
+        var parseSuccess = int.TryParse(SgPort, out var port);
+        if (!parseSuccess) port = 8080;
+        
+        SmsService smsService = new(SgIP, port, SgUsername, SgPassword);
         //TODO: Check if the IP is available and username + password are correct
+        var success = false;
+        await Task.Run(async () =>
+        {
+            try
+            {
+                success = await smsService.IsDeviceReachableAsync();
+            } 
+            catch (Exception) {}
+        });
+        if (!success) return;
 
         Messenger.Publish(new Message
         {
             Action = Globals.NewSessionAction,
             Data = new Session
             {
-                SmsService = new(SgIP, SgUsername, SgPassword)
+                SmsService = smsService
             }
         });
         SgUsername = string.Empty;

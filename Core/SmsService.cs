@@ -2,19 +2,21 @@ using System;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using ClosedXML.Parser;
+using Core.ApiResponseClasses;
 using Core.Models;
 
 namespace Core;
 
 public class SmsService
 {
-    private string AUTH_TOKEN;
-    private string DEVICE_IP;
-    private const int PORT = 8080;
+    private string _authToken;
+    private string _deviceIP;
+    private int _port;
     private HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public SmsService(string ipAddress, string username, string password)
+    public SmsService(string ipAddress, int port, string username, string password)
     {
         var handler = new HttpClientHandler
         {
@@ -27,14 +29,15 @@ public class SmsService
             WriteIndented = true
         };
 
-        DEVICE_IP = ipAddress;
-        AUTH_TOKEN = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", AUTH_TOKEN);
+        _deviceIP = ipAddress;
+        _port = port;
+        _authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authToken);
     }
 
-    public async Task SendMessageAsync(string message, List<string> numbers)
+    public async Task<List<Recipient>> SendMessageAsync(string message, List<string> numbers)
     {
-        var url = $"http://{DEVICE_IP}:{PORT}/message";
+        var url = $"http://{_deviceIP}:{_port}/message";
 
         var payload = new SendMessageSchema
         {
@@ -50,7 +53,23 @@ public class SmsService
 
         // Output response
         string responseString = await response.Content.ReadAsStringAsync();
-        Console.WriteLine($"Status: {response.StatusCode}");
-        Console.WriteLine($"Response: {responseString}");
+        var responseObj = JsonSerializer.Deserialize<SendMessageResponse>(responseString);
+
+        return responseObj!.Recipients;
     }
+
+    public async Task<bool> IsDeviceReachableAsync()
+    {
+        try
+        {
+            var url = $"http://{_deviceIP}:{_port}/";
+            var response = await _httpClient.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
 }

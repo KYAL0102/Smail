@@ -3,8 +3,47 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:SmailAvalonia.ViewModels"
+             xmlns:converter="using:SmailAvalonia.Converter"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SmailAvalonia.Views.PayloadExecutionControl"
              x:DataType="vm:PayloadExecutionViewModel">
-  Welcome to Avalonia!
+  <UserControl.Resources>
+    <converter:TypeToIconConverter x:Key="TypeToIconConverter"/>
+    <converter:StatusToColorConverter x:Key="StatusToColorConverter"/>
+  </UserControl.Resources>
+  <Grid Width="800" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/>
+    </Grid.ColumnDefinitions>
+
+    <Label Grid.Row="0" Grid.Column="0" Content="Status Tracking"/>
+
+    <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding ContactStates}">
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="4">
+
+                <!-- Icon for SMS or Email -->
+                <!--<Image Width="20" Height="20"
+                  Source="{Binding TransmissionType, Converter={StaticResource TypeToIconConverter}}" />-->
+
+                <!-- Contact name -->
+                <TextBlock Text="{Binding Contact.Name}" VerticalAlignment="Center" FontWeight="Bold" Width="150"/>
+
+                <!-- Status with colored badge -->
+                <Border Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                        CornerRadius="4" Padding="4">
+                    <TextBlock Text="{Binding Status}" Foreground="White"/>
+                </Border>
+            </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </Grid>
 </UserControl>
