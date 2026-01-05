@@ -13,12 +13,14 @@ builder.Services.AddSignalR();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    //options.ListenAnyIP(5000); // HTTP (optional)
+    ///options.ListenAnyIP(5000); // HTTP (optional)
     options.ListenAnyIP(5001, listenOptions =>
     {
         listenOptions.UseHttps(pfxPath, pfxPwd);
     });
-    options.ListenLocalhost(5005, listenOptions => {});
+
+    options
+        .ListenLocalhost(5005);
 });
 
 var app = builder.Build();
@@ -28,6 +30,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseRouting();
 
 app.Use(async (context, next) =>
 {
@@ -43,9 +47,31 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseWhen(
+    ctx => ctx.Connection.LocalPort == 5005,
+    app5005 =>
+    {
+        app5005.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHub<WebsocketHub>("/ws");
+        });
+    }
+);
 
-app.UseHttpsRedirection();
-app.MapHub<WebsocketHub>("/ws");
-app.MapControllers();
+app.UseWhen(
+    ctx => ctx.Connection.LocalPort == 5001,
+    app5001 =>
+    {
+        app5001.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
+    }
+);
+
+
+//app.UseHttpsRedirection();
+//app.MapHub<WebsocketHub>("/ws");
+//app.MapControllers();
 
 app.Run();

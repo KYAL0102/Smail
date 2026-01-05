@@ -17,6 +17,7 @@ public class WebhookResponse
     [JsonPropertyName("payload")]
     public JsonElement JsonPayload { get; set; } = new();
 
+    [JsonIgnore]
     public Payload? Payload { get; set; }
 
     [JsonPropertyName("webhookId")]

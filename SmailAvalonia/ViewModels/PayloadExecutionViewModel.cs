@@ -24,6 +24,8 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     public async Task InitializeDataAsync()
     {
+        await ConnectToServerWebsocket();
+
         var emailContacts = Payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
             .Select(kvp => kvp.Key.Email)
@@ -52,12 +54,38 @@ public class PayloadExecutionViewModel: ViewModelBase
         .ForEach(ContactStates.Add);
     }
 
-    private void ConnectToServerWebsocket()
+    private async Task ConnectToServerWebsocket()
     {
+        Console.WriteLine("Attempting connection to hub...");
         _connection = new HubConnectionBuilder()
-            .WithUrl("http://127.0.0.1:5005/ws") // API address
+            .WithUrl("http://127.0.0.1:5005/ws")
             .WithAutomaticReconnect()
             .Build();
+
+        _connection.Closed += async (error) =>
+        {
+            Console.WriteLine($"Connection closed: {error?.Message}");
+            await Task.Delay(5000);
+            await _connection.StartAsync();
+        };
+
+        try
+        {
+            await _connection.StartAsync();
+            Console.WriteLine("Connected to hub!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("===== SIGNALR CONNECT ERROR =====");
+            Exception? e = ex;
+            while (e != null)
+            {
+                Console.WriteLine(e.GetType().FullName);
+                Console.WriteLine(e.Message);
+                Console.WriteLine();
+                e = e.InnerException;
+            }
+        }
 
         // When server pushes update
         _connection.On<WebhookResponse>("WebhookUpdate", (data) =>
