@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Core;
 using Core.Models;
 using SmailAvalonia.Views;
+using SmailAvalonia.Services;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -37,7 +38,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task InitializeDataAsync()
     {
-        await Task.CompletedTask;
+        await WsClientService.Instance.ConnectToServerWsHub();
+    }
+
+    public async Task OnShutdownAsync()
+    {
+        // Stop services
+        // Remove webhooks
+        // Save state
+        await _currentSession.PrepareShutdown();
     }
 
     private void AssignNewSession(object? obj)

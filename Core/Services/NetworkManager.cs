@@ -15,22 +15,26 @@ using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto.Parameters;
 
 
-namespace Core;
+namespace Core.Services;
 
 public static class NetworkManager
 {
     // ----------------------------------------------------------------------
     //  PUBLIC ENTRY POINT
     // ----------------------------------------------------------------------
-    public static (string PfxPath, string Password) GenerateCertificateForLocalIp()
+    public static (string PfxPath, string Password) GetCertificateForLocalIp()
     {
         string ip = GetLocalIPv4();
+        string password = "K1Nnay0102"; // TODO: UI solution to set it
         //Console.WriteLine($"Detected LAN IP: {ip}");
 
         string workDir = GetCertWorkDirectory();
-        RunSmsGateCa(ip, workDir);
 
-        string password = "K1Nnay0102"; // You could randomize this
+        string pfxPath = Path.Combine(workDir, "server.pfx");
+
+        if(File.Exists(pfxPath)) return (pfxPath, password);
+
+        RunSmsGateCa(ip, workDir);
         string pfx = ConvertToPfxDotNet(workDir, password);
 
         return (pfx, password);
@@ -57,10 +61,72 @@ public static class NetworkManager
 
     public static string GetCertWorkDirectory()
     {
-        string folder = Path.Combine(AppContext.BaseDirectory, "Certificates");
+        string networkId = GetNetworkId();
+
+        string folder = Path.Combine(
+            AppContext.BaseDirectory,
+            "Certificates",
+            networkId
+        );
 
         Directory.CreateDirectory(folder);
         return folder;
+    }
+
+    private static string GetNetworkId()
+    {
+        foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (ni.OperationalStatus != OperationalStatus.Up)
+                continue;
+
+            if (!ni.GetIPProperties().GatewayAddresses
+                .Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork))
+                continue;
+
+            // Skip loopback & virtual adapters
+            if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback ||
+                ni.Description.ToLower().Contains("virtual") ||
+                ni.Description.ToLower().Contains("vmware") ||
+                ni.Description.ToLower().Contains("hyper-v"))
+                continue;
+
+            foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+            {
+                if (ua.Address.AddressFamily != AddressFamily.InterNetwork)
+                    continue;
+
+                if (IPAddress.IsLoopback(ua.Address))
+                    continue;
+
+                if (ua.IPv4Mask == null)
+                    continue;
+
+                var network = GetNetworkAddress(ua.Address, ua.IPv4Mask);
+                var cidr = MaskToCidr(ua.IPv4Mask);
+
+                return $"{network}-{cidr}";
+            }
+        }
+
+        throw new Exception("No active non-loopback IPv4 network found.");
+    }
+
+    private static IPAddress GetNetworkAddress(IPAddress ip, IPAddress mask)
+    {
+        var ipBytes = ip.GetAddressBytes();
+        var maskBytes = mask.GetAddressBytes();
+        var networkBytes = new byte[4];
+
+        for (int i = 0; i < 4; i++)
+            networkBytes[i] = (byte)(ipBytes[i] & maskBytes[i]);
+
+        return new IPAddress(networkBytes);
+    }
+
+    private static int MaskToCidr(IPAddress mask)
+    {
+        return mask.GetAddressBytes().Sum(b => Convert.ToString(b, 2).Count(c => c == '1'));
     }
 
     // ----------------------------------------------------------------------

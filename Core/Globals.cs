@@ -2,6 +2,8 @@
 
 public static class Globals
 {
+    public static string WebsocketURL { get; } = "http://127.0.0.1:5005/ws";
+
     public static string NavigateToAuthenticationAction { get; } = "authentication";
     public static string NavigateToPayloadSummaryAction { get; } = "summary";
     public static string NavigateToMessageConfigurationAction { get; } = "textconfig";

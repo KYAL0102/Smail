@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using System.Text;  
 using System.Security.Cryptography;  
-using System.Text.Json;
-using Core.ApiResponseClasses;
 
 
 namespace SmailAPI.Controllers;
@@ -23,8 +21,8 @@ public class WebhookController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> ReceiveWebhook()
     {
-        string signature = HttpContext.Request.Headers["X-Signature"];
-        string timestamp = HttpContext.Request.Headers["X-Timestamp"];
+        string? signature = HttpContext.Request.Headers["X-Signature"];
+        string? timestamp = HttpContext.Request.Headers["X-Timestamp"];
         using var reader = new StreamReader(Request.Body);
         var body = await reader.ReadToEndAsync();
 
@@ -38,26 +36,13 @@ public class WebhookController : ControllerBase
                 Encoding.UTF8.GetBytes(computed),
                 Encoding.UTF8.GetBytes(signature)))
         {
+            Console.WriteLine("Authorization of incoming request failed (signing key was false).");
             return Unauthorized(new { status = "Signing Key was false!" });
         }
 
-        var responseObj = JsonSerializer.Deserialize<WebhookResponse>(body);
-        Console.WriteLine($"Result of deserialization: {responseObj}");
-
-        if (responseObj != null) 
-        {
-            responseObj.Payload = responseObj?.Event switch
-            {
-                "sms:failed" => responseObj.JsonPayload.Deserialize<FailedPayload>(),
-                "sms:delivered" => responseObj.JsonPayload.Deserialize<DeliveredPayload>(),
-                "email:sent" => responseObj.JsonPayload.Deserialize<SentPayload>(),
-                _ => null
-            };
-
-            // Forward to Avalonia frontend
-            Console.WriteLine($"Sending object via ws...");
-            await _hub.Clients.All.SendAsync("WebhookUpdate", responseObj);
-        }
+        // Forward to Avalonia frontend
+        Console.WriteLine($"Sending body via ws...");
+        await _hub.Clients.All.SendAsync("WebhookUpdate", body);
 
         return Ok(new { status = "received" });
     }

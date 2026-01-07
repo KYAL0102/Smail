@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Core.ApiResponseClasses;
 
-public class WebhookResponse
+public class Webhook
 {
     [JsonPropertyName("deviceId")]
     public string DeviceId { get; set; } = string.Empty;
@@ -17,7 +17,6 @@ public class WebhookResponse
     [JsonPropertyName("payload")]
     public JsonElement JsonPayload { get; set; } = new();
 
-    [JsonIgnore]
     public Payload? Payload { get; set; }
 
     [JsonPropertyName("webhookId")]

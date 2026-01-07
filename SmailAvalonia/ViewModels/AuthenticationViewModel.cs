@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
+using Core.Services;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -83,7 +84,10 @@ public class AuthenticationViewModel : ViewModelBase
             {
                 success = await smsService.IsDeviceReachableAsync();
             } 
-            catch (Exception) {}
+            catch (Exception e) 
+            {
+                Console.WriteLine(e.Message);
+            }
         });
         if (!success) return;
 

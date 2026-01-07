@@ -12,4 +12,11 @@ public class WebsocketHub : Hub
         // Call the base method to ensure the connection is properly established
         await base.OnConnectedAsync();
     }
+
+    public override async Task OnDisconnectedAsync(Exception? e)
+    {
+        Console.WriteLine($"{Context.ConnectionId} disconnected.");
+
+        await base.OnDisconnectedAsync(e);
+    }
 }

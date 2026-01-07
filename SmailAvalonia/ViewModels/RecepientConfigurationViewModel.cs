@@ -130,17 +130,11 @@ public class RecepientConfigurationViewModel: ViewModelBase
 
     private void UpdateCurrentBatch(int batchSize = -1)
     {
+        Contacts.Clear();
         if (CurrentStartIndex < 0 || CurrentStartIndex >= AllContacts.Count)
         {
-            Console.WriteLine($"Index is out of bounds! ({CurrentStartIndex})");
+            //Console.WriteLine($"Index is out of bounds! ({CurrentStartIndex})");
             return;
-        }
-        Contacts.Clear();
-        
-        if (batchSize == -1)
-        {
-            batchSize = AllContacts.Count - CurrentStartIndex;
-            if (batchSize > 5) batchSize = 5;
         }
 
         AllContacts

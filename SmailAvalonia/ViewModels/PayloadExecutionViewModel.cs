@@ -2,16 +2,16 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Core;
 using Core.ApiResponseClasses;
 using Core.Models;
-using Microsoft.AspNetCore.SignalR.Client;
+using SmailAvalonia.Services;
 
 namespace SmailAvalonia.ViewModels;
 
 public class PayloadExecutionViewModel: ViewModelBase
 {
-    private HubConnection _connection;
     public MessagePayload Payload { get; init; }
     private Session Session { get; init; }
     public PayloadExecutionViewModel(Session session, MessagePayload payload)
@@ -24,7 +24,7 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     public async Task InitializeDataAsync()
     {
-        await ConnectToServerWebsocket();
+        await RegisterToWebsocketEvent();
 
         var emailContacts = Payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
@@ -54,54 +54,43 @@ public class PayloadExecutionViewModel: ViewModelBase
         .ForEach(ContactStates.Add);
     }
 
-    private async Task ConnectToServerWebsocket()
+    private async Task RegisterToWebsocketEvent()
     {
-        Console.WriteLine("Attempting connection to hub...");
-        _connection = new HubConnectionBuilder()
-            .WithUrl("http://127.0.0.1:5005/ws")
-            .WithAutomaticReconnect()
-            .Build();
-
-        _connection.Closed += async (error) =>
-        {
-            Console.WriteLine($"Connection closed: {error?.Message}");
-            await Task.Delay(5000);
-            await _connection.StartAsync();
-        };
-
-        try
-        {
-            await _connection.StartAsync();
-            Console.WriteLine("Connected to hub!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("===== SIGNALR CONNECT ERROR =====");
-            Exception? e = ex;
-            while (e != null)
-            {
-                Console.WriteLine(e.GetType().FullName);
-                Console.WriteLine(e.Message);
-                Console.WriteLine();
-                e = e.InnerException;
-            }
-        }
-
         // When server pushes update
-        _connection.On<WebhookResponse>("WebhookUpdate", (data) =>
+        WsClientService.Instance.On<string>("WebhookUpdate", (body) =>
         {
-            Console.WriteLine("Got update: " + data.Event);
-
             // Must update UI on UI thread
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                HandleWebhookEvent(data);
+                HandleWebhookEvent(body);
             });
         });
     }
 
-    private void HandleWebhookEvent(WebhookResponse response)
+    private void HandleWebhookEvent(string body)
     {
-        Console.WriteLine($"Response from webhook: {response.Event}");
+        var response = JsonSerializer.Deserialize<Webhook>(body);
+
+        if (response != null) 
+        {
+            response.Payload = response?.Event switch
+            {
+                "sms:failed" => response.JsonPayload.Deserialize<FailedPayload>(),
+                "sms:delivered" => response.JsonPayload.Deserialize<DeliveredPayload>(),
+                "email:sent" => response.JsonPayload.Deserialize<SentPayload>(),
+                _ => null
+            };
+
+            
+        }
+
+        Enum.TryParse<SendStatus>(response?.Event.Split(':')[1], true, out var status);
+        var number = response?.Payload.PhoneNumber;
+        
+        var cs = ContactStates
+            .SingleOrDefault(state => state.Contact.MobileNumber == number);
+        
+        //Console.WriteLine($"Setting {status} for {cs.Contact.Name}...");
+        cs.Status = status;
     }
 }

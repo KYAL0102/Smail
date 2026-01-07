@@ -1,9 +1,9 @@
-using Core;
+using Core.Services;
 using SmailAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var (pfxPath, pfxPwd) = NetworkManager.GenerateCertificateForLocalIp();
+var (pfxPath, pfxPwd) = NetworkManager.GetCertificateForLocalIp();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -70,7 +70,7 @@ app.UseWhen(
 );
 
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 //app.MapHub<WebsocketHub>("/ws");
 //app.MapControllers();
 
