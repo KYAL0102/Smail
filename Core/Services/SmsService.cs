@@ -39,7 +39,7 @@ public class SmsService
         _ = RegisterWebhooks();
     }
 
-    public async Task DeregisterWebhooks()
+    public async Task DeregisterWebhooksAsync()
     {
         List<Task> tasks = [];
         foreach(var wh in _webhooks)
@@ -107,10 +107,14 @@ public class SmsService
     {
         var url = $"http://{_deviceIP}:{_port}/message";
 
+        var encryptor = new AesEncryptor(Globals.AesPassphrase);
+        var encryptedMessage = encryptor.Encrypt(message);
+        var encryptedNumbers = numbers.Select(n => encryptor.Encrypt(n)).ToArray();
+
         var payload = new SendMessageSchema
         {
-            textMessage = new TextMessage{ text = message },
-            phoneNumbers = numbers.ToArray()
+            TextMessage = new TextMessage{ Text = encryptedMessage },
+            PhoneNumbers = encryptedNumbers
         };
 
         var json = JsonSerializer.Serialize(payload);
@@ -123,7 +127,14 @@ public class SmsService
         string responseString = await response.Content.ReadAsStringAsync();
         var responseObj = JsonSerializer.Deserialize<SendMessageResponse>(responseString);
 
-        return responseObj!.Recipients;
+        var recipients = responseObj!.Recipients;
+        foreach(var r in recipients)
+        {
+            var encryptedNumber = r.PhoneNumber;
+            r.PhoneNumber = encryptor.Decrypt(r.PhoneNumber);
+        }
+
+        return recipients;
     }
 
     public async Task<bool> IsDeviceReachableAsync()

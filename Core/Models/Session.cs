@@ -7,8 +7,8 @@ public class Session
 {
     public required SmsService SmsService { get; init; }
 
-    public async Task PrepareShutdown()
+    public async Task PrepareShutdownAsync()
     {
-        SmsService.DeregisterWebhooks();
+        await SmsService.DeregisterWebhooksAsync();
     }
 }

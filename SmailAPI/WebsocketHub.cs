@@ -6,17 +6,13 @@ public class WebsocketHub : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        // Log the connection to the console
-        Console.WriteLine($"New client connected: {Context.ConnectionId}");
-
-        // Call the base method to ensure the connection is properly established
+        //Console.WriteLine($"New client connected: {Context.ConnectionId}");
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? e)
     {
-        Console.WriteLine($"{Context.ConnectionId} disconnected.");
-
+        //Console.WriteLine($"{Context.ConnectionId} disconnected.");
         await base.OnDisconnectedAsync(e);
     }
 }

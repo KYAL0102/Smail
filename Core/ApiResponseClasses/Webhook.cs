@@ -22,4 +22,3 @@ public class Webhook
     [JsonPropertyName("webhookId")]
     public string WebhookId { get; set; } = string.Empty;
 }
-

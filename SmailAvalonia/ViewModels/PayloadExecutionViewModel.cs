@@ -7,6 +7,7 @@ using Core;
 using Core.ApiResponseClasses;
 using Core.Models;
 using SmailAvalonia.Services;
+using Core.Services;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -24,7 +25,7 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     public async Task InitializeDataAsync()
     {
-        await RegisterToWebsocketEvent();
+        RegisterToWebsocketEvent();
 
         var emailContacts = Payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
@@ -54,7 +55,7 @@ public class PayloadExecutionViewModel: ViewModelBase
         .ForEach(ContactStates.Add);
     }
 
-    private async Task RegisterToWebsocketEvent()
+    private void RegisterToWebsocketEvent()
     {
         // When server pushes update
         WsClientService.Instance.On<string>("WebhookUpdate", (body) =>
@@ -85,12 +86,16 @@ public class PayloadExecutionViewModel: ViewModelBase
         }
 
         Enum.TryParse<SendStatus>(response?.Event.Split(':')[1], true, out var status);
-        var number = response?.Payload.PhoneNumber;
+        
+        var encryptor = new AesEncryptor(Globals.AesPassphrase);
+        var encryptedNumber = response?.Payload?.PhoneNumber;
+        var number = encryptor.Decrypt(encryptedNumber);
         
         var cs = ContactStates
             .SingleOrDefault(state => state.Contact.MobileNumber == number);
         
         //Console.WriteLine($"Setting {status} for {cs.Contact.Name}...");
-        cs.Status = status;
+        if(cs != null) cs.Status = status;
+        //TODO: Extract data from payload depending on event type
     }
 }

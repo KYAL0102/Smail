@@ -40,8 +40,7 @@ public class WebhookController : ControllerBase
             return Unauthorized(new { status = "Signing Key was false!" });
         }
 
-        // Forward to Avalonia frontend
-        Console.WriteLine($"Sending body via ws...");
+        //Console.WriteLine($"Sending body via ws...");
         await _hub.Clients.All.SendAsync("WebhookUpdate", body);
 
         return Ok(new { status = "received" });

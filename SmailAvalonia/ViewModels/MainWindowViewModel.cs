@@ -46,7 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase
         // Stop services
         // Remove webhooks
         // Save state
-        await _currentSession.PrepareShutdown();
+        await _currentSession.PrepareShutdownAsync();
     }
 
     private void AssignNewSession(object? obj)
