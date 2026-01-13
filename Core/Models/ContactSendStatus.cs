@@ -2,13 +2,24 @@ using Core.Models;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace Core.ApiResponseClasses;
+namespace Core.Models;
 
 public class ContactSendStatus : INotifyPropertyChanged
 {
     public required TransmissionType TransmissionType { get; init; }
     public required Contact Contact { get; init; }
     
+    private string _details = string.Empty;
+    public string Details
+    {
+        get => _details;
+        set
+        {
+            _details = value;
+            OnPropertyChanged();
+        }
+    }
+
     private SendStatus _status = SendStatus.PENDING;
     public required SendStatus Status 
     { 

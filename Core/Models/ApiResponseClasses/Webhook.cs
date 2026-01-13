@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Core.ApiResponseClasses;
+namespace Core.Models.ApiResponseClasses;
 
 public class Webhook
 {

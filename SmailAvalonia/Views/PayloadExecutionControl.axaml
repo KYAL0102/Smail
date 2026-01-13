@@ -27,21 +27,79 @@
     <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding ContactStates}">
       <ListBox.ItemTemplate>
         <DataTemplate>
-            <StackPanel Orientation="Horizontal" Spacing="12" Margin="4">
+          <Expander ExpandDirection="Down" Margin="4,2" HorizontalAlignment="Stretch">
+            <Expander.Header>
+              <Grid HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/> <!-- Name -->
+                  <ColumnDefinition Width="*"/>    <!-- Flexible space -->
+                  <ColumnDefinition Width="Auto"/> <!-- Status badge -->
+                </Grid.ColumnDefinitions>
 
-                <!-- Icon for SMS or Email -->
-                <!--<Image Width="20" Height="20"
-                  Source="{Binding TransmissionType, Converter={StaticResource TypeToIconConverter}}" />-->
+                
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Contact.Name}"
+                           VerticalAlignment="Center"
+                           FontWeight="Bold"/>
 
-                <!-- Contact name -->
-                <TextBlock Text="{Binding Contact.Name}" VerticalAlignment="Center" FontWeight="Bold" Width="150"/>
+                        
+                <TextBlock Grid.Column="1"
+                           Text=""
+                           VerticalAlignment="Center"/>
 
-                <!-- Status with colored badge -->
-                <Border Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
-                        CornerRadius="4" Padding="4">
-                    <TextBlock Text="{Binding Status}" Foreground="White"/>
-                </Border>
-            </StackPanel>
+                  <Border Grid.Column="2"
+                          Background="{Binding Status, Converter={StaticResource StatusToColorConverter}}"
+                          CornerRadius="4"
+                          Padding="6,4"
+                          VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Status}"
+                               Foreground="White"/>
+                  </Border>
+                </Grid>
+              </Expander.Header>
+
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Label Grid.Column="0" Grid.Row="0" VerticalAlignment="Center"
+                      Content="Name: "/>
+                <TextBlock Grid.Column="1" Grid.Row="0" VerticalAlignment="Center"
+                          Text="{Binding Contact.Name}" 
+                          Margin="20,8"
+                          TextWrapping="Wrap"
+                          Foreground="Gray"/>
+
+                <Label Grid.Column="0" Grid.Row="1" Content="Number: " VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Grid.Row="1" VerticalAlignment="Center"
+                          Text="{Binding Contact.MobileNumber}" 
+                          Margin="20,8"
+                          TextWrapping="Wrap"
+                          Foreground="Gray"/>
+                
+                <Label Grid.Column="0" Grid.Row="2" Content="Email: " VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Grid.Row="2" VerticalAlignment="Center"
+                          Text="{Binding Contact.Email}" 
+                          Margin="20,8"
+                          TextWrapping="Wrap"
+                          Foreground="Gray"/>
+
+                <Label Grid.Column="0" Grid.Row="3" VerticalAlignment="Center" Content="Details: "/>
+                <TextBlock Grid.Column="1" Grid.Row="3" VerticalAlignment="Center"
+                          Text="{Binding Details}" 
+                          Margin="20,8"
+                          TextWrapping="Wrap"
+                          Foreground="Gray"/>
+              </Grid>
+          </Expander>
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>

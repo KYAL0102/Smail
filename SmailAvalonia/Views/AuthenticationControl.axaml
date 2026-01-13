@@ -28,7 +28,7 @@
     <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SgIP, Mode=TwoWay}"/>
 
     <Label Content="Port:" Grid.Row="1" Grid.Column="2"/>
-    <TextBox Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="3" Text="{Binding SgPort, Mode=TwoWay}"/>
+    <TextBox Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Text="{Binding SgPort, Mode=TwoWay}"/>
 
     <Label Content="Username:" Grid.Row="2" Grid.Column="0"/>
     <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding SgUsername, Mode=TwoWay}"/>
@@ -36,7 +36,11 @@
     <Label Content="Password:" Grid.Row="3" Grid.Column="0"/>
     <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
 
-    <Button Grid.Row="4" Grid.Column="3" Content="Apply" HorizontalAlignment="Right" 
+    <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
+          Foreground="Red"
+          Content="{Binding ErrorMessage, Mode=TwoWay}"/>
+    
+    <Button Grid.Row="4" Grid.Column="3" Grid.ColumnSpan="2" Content="Apply" HorizontalAlignment="Right" 
             Command="{Binding StartMessageConfigurationCommand}"/>
   </Grid>
 </UserControl>

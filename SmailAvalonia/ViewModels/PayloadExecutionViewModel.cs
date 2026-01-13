@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
 using Core;
-using Core.ApiResponseClasses;
+using Core.Models.ApiResponseClasses;
 using Core.Models;
 using SmailAvalonia.Services;
 using Core.Services;
@@ -70,25 +70,26 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     private void HandleWebhookEvent(string body)
     {
+        //Console.WriteLine(body);
         var response = JsonSerializer.Deserialize<Webhook>(body);
-
-        if (response != null) 
+        if(response == null) 
         {
-            response.Payload = response?.Event switch
-            {
-                "sms:failed" => response.JsonPayload.Deserialize<FailedPayload>(),
-                "sms:delivered" => response.JsonPayload.Deserialize<DeliveredPayload>(),
-                "email:sent" => response.JsonPayload.Deserialize<SentPayload>(),
-                _ => null
-            };
-
-            
+            Console.WriteLine($"Deserialization into {nameof(Webhook)} failed! ->\n{body}");
+            return;
         }
 
-        Enum.TryParse<SendStatus>(response?.Event.Split(':')[1], true, out var status);
+        response.Payload = response.Event switch
+        {
+            "sms:failed" => response.JsonPayload.Deserialize<FailedPayload>(),
+            "sms:delivered" => response.JsonPayload.Deserialize<DeliveredPayload>(),
+            "email:sent" => response.JsonPayload.Deserialize<SentPayload>(),
+            _ => null
+        };
+
+        Enum.TryParse<SendStatus>(response.Event.Split(':')[1], true, out var status);
         
         var encryptor = new AesEncryptor(Globals.AesPassphrase);
-        var encryptedNumber = response?.Payload?.PhoneNumber;
+        var encryptedNumber = response.Payload?.PhoneNumber;
         var number = encryptor.Decrypt(encryptedNumber);
         
         var cs = ContactStates
@@ -96,6 +97,14 @@ public class PayloadExecutionViewModel: ViewModelBase
         
         //Console.WriteLine($"Setting {status} for {cs.Contact.Name}...");
         if(cs != null) cs.Status = status;
-        //TODO: Extract data from payload depending on event type
+        if (status != SendStatus.FAILED) return;
+
+        var payload = (FailedPayload?) response.Payload;
+
+        if(cs != null && payload != null) 
+        {
+            var reason = payload.Reason.Split(':')[1].TrimStart();
+            cs.Details = reason;
+        }
     }
 }

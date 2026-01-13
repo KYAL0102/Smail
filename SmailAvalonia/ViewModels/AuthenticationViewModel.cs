@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Net.Http;
 using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
@@ -55,6 +56,17 @@ public class AuthenticationViewModel : ViewModelBase
         }
     }
 
+    private string _errorMsg = string.Empty;
+    public string ErrorMessage
+    {
+        get => _errorMsg;
+        set
+        {
+            _errorMsg = value;
+            OnPropertyChanged();
+        }
+    }
+
     public RelayCommand StartMessageConfigurationCommand { get; init; }
     public AuthenticationViewModel(MessagePayload? payload = null)
     {
@@ -77,19 +89,25 @@ public class AuthenticationViewModel : ViewModelBase
         
         SmsService smsService = new(SgIP, port, SgUsername, SgPassword);
         //TODO: Check if the IP is available and username + password are correct
-        var success = false;
-        await Task.Run(async () =>
+        try
         {
-            try
+            var response = await smsService.IsDeviceReachableAsync();
+
+            if (response == null || !response.IsSuccessStatusCode) 
             {
-                success = await smsService.IsDeviceReachableAsync();
-            } 
-            catch (Exception e) 
-            {
-                Console.WriteLine(e.Message);
+                if (response == null) ErrorMessage = "An unknown error occured.";
+                else ErrorMessage = $"{response.ReasonPhrase} ({response.StatusCode})";
+                return;
             }
-        });
-        if (!success) return;
+        } 
+        catch (Exception e) 
+        {
+            //Console.WriteLine(e.Message);
+            ErrorMessage = e.Message;
+            return;
+        }
+
+        _ = Task.Run(smsService.RegisterWebhooks);
 
         Messenger.Publish(new Message
         {

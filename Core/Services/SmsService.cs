@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using ClosedXML.Parser;
-using Core.ApiResponseClasses;
+using Core.Models.ApiResponseClasses;
 using Core.Models;
 
 namespace Core.Services;
@@ -35,8 +35,6 @@ public class SmsService
         _port = port;
         _authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authToken);
-
-        _ = RegisterWebhooks();
     }
 
     public async Task DeregisterWebhooksAsync()
@@ -137,18 +135,11 @@ public class SmsService
         return recipients;
     }
 
-    public async Task<bool> IsDeviceReachableAsync()
+    public async Task<HttpResponseMessage?> IsDeviceReachableAsync()
     {
-        try
-        {
-            var url = $"http://{_deviceIP}:{_port}/";
-            var response = await _httpClient.GetAsync(url);
-            return response.IsSuccessStatusCode;
-        }
-        catch (HttpRequestException)
-        {
-            return false;
-        }
+        var url = $"http://{_deviceIP}:{_port}/";
+        var response = await _httpClient.GetAsync(url);
+        return response;
     }
 
 }
