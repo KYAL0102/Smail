@@ -82,7 +82,7 @@ public class PayloadExecutionViewModel: ViewModelBase
         {
             "sms:failed" => response.JsonPayload.Deserialize<FailedPayload>(),
             "sms:delivered" => response.JsonPayload.Deserialize<DeliveredPayload>(),
-            "email:sent" => response.JsonPayload.Deserialize<SentPayload>(),
+            "sms:sent" => response.JsonPayload.Deserialize<SentPayload>(),
             _ => null
         };
 

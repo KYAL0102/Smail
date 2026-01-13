@@ -27,7 +27,7 @@ public class SentPayload : Payload
 {
 
     [JsonPropertyName("partsCount")]
-    public string PartsCount { get; set; } = string.Empty;
+    public int PartsCount { get; set; } = 0;
 
     [JsonPropertyName("sentAt")]
     public string SentAt { get; set; } = string.Empty;
