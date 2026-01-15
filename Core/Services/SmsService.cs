@@ -1,4 +1,5 @@
 using System;
+using System.Security;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text;
@@ -11,14 +12,14 @@ namespace Core.Services;
 
 public class SmsService
 {
-    private readonly string _authToken;
+    private string _authToken = string.Empty;
     private readonly string _deviceIP;
     private readonly int _port;
     private readonly HttpClient _httpClient;
     private ConcurrentBag<Webhook> _webhooks = [];
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public SmsService(string ipAddress, int port, string username, string password)
+    public SmsService(string ipAddress, int port)
     {
         var handler = new HttpClientHandler
         {
@@ -31,10 +32,25 @@ public class SmsService
             WriteIndented = true
         };
 
+        UpdateToken();
+
         _deviceIP = ipAddress;
         _port = port;
-        _authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authToken);
+    }
+
+    private void UpdateToken()
+    {
+        var usr = SecurityVault.Instance.GetUsername();
+        using var pwd = SecurityVault.Instance.GetGatewayPassword();
+
+        if (usr == string.Empty || pwd.Value == null) 
+        {
+            Console.WriteLine($"Either username was empty or password was null.");
+            return;
+        }
+
+        _authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{usr}:{pwd.Value}"));
     }
 
     public async Task DeregisterWebhooksAsync()
@@ -105,7 +121,10 @@ public class SmsService
     {
         var url = $"http://{_deviceIP}:{_port}/message";
 
-        var encryptor = new AesEncryptor(Globals.AesPassphrase);
+        using var aesPassphraseAccessor = SecurityVault.Instance.GetAesPassphrase();
+        var aesPassphrase = aesPassphraseAccessor.Value ?? string.Empty;
+
+        var encryptor = new AesEncryptor(aesPassphrase);
         var encryptedMessage = encryptor.Encrypt(message);
         var encryptedNumbers = numbers.Select(n => encryptor.Encrypt(n)).ToArray();
 

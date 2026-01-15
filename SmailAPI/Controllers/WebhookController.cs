@@ -1,23 +1,19 @@
 using Core;
+using Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using System.Text;  
-using System.Security.Cryptography;  
+using System.Security.Cryptography;
+using System.Security;
+using Core.Models;
 
 
 namespace SmailAPI.Controllers;
 
 [ApiController]
 [Route("api/webhook")]
-public class WebhookController : ControllerBase
+public class WebhookController(IHubContext<WebsocketHub> _hub) : ControllerBase
 {
-    private readonly IHubContext<WebsocketHub> _hub;
-
-    public WebhookController(IHubContext<WebsocketHub> hub)
-    {
-        _hub = hub;
-    }
-
     [HttpPost]
     public async Task<IActionResult> ReceiveWebhook()
     {
@@ -27,7 +23,7 @@ public class WebhookController : ControllerBase
         var body = await reader.ReadToEndAsync();
 
         // Compute local HMAC
-        var key = Encoding.UTF8.GetBytes("tZSihgTH");
+        var key = Encoding.UTF8.GetBytes(SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty);
         using var hmac = new HMACSHA256(key);
         byte[] data = Encoding.UTF8.GetBytes(body + timestamp);
         string computed = Convert.ToHexStringLower(hmac.ComputeHash(data)).Replace("-", "").ToLowerInvariant();

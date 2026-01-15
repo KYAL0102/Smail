@@ -10,9 +10,9 @@ public class AesEncryptor
     private readonly string _passphrase;
     private readonly int _iterations;
 
-    public AesEncryptor(string passphrase, int iterations = 75_000)
+    public AesEncryptor(string? passphrase, int iterations = 75_000)
     {
-        _passphrase = passphrase;
+        _passphrase = passphrase ?? string.Empty;
         _iterations = iterations;
     }
 

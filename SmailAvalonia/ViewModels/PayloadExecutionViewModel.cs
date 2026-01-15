@@ -88,7 +88,7 @@ public class PayloadExecutionViewModel: ViewModelBase
 
         Enum.TryParse<SendStatus>(response.Event.Split(':')[1], true, out var status);
         
-        var encryptor = new AesEncryptor(Globals.AesPassphrase);
+        var encryptor = new AesEncryptor(SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty);
         var encryptedNumber = response.Payload?.PhoneNumber;
         var number = encryptor.Decrypt(encryptedNumber);
         

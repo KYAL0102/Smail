@@ -23,7 +23,7 @@ public class AuthenticationViewModel : ViewModelBase
         }
     }
 
-    private string _sgPort = string.Empty;
+    private string _sgPort = "8080";
     public string SgPort
     {
         get => _sgPort;
@@ -87,8 +87,10 @@ public class AuthenticationViewModel : ViewModelBase
         var parseSuccess = int.TryParse(SgPort, out var port);
         if (!parseSuccess) port = 8080;
         
-        SmsService smsService = new(SgIP, port, SgUsername, SgPassword);
-        //TODO: Check if the IP is available and username + password are correct
+        //SgUsername, SgPassword
+        SecurityVault.Instance.SetGateWayCredentials(SgUsername, SgPassword);
+        SmsService smsService = new(SgIP, port);
+        
         try
         {
             var response = await smsService.IsDeviceReachableAsync();

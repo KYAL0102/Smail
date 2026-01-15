@@ -1,29 +1,40 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Data.Converters;
+using Avalonia.Media;
+using Core.Models;
 using System;
 using System.Globalization;
-using Avalonia.Data.Converters;
-using Avalonia.Media.Imaging;
-using Core.Models;
 
-namespace SmailAvalonia.Converter;
-
-public class TypeToIconConverter : IValueConverter
+namespace SmailAvalonia.Converter  // ← adjust to your actual namespace
 {
-    private static readonly Bitmap SmsBitmap = new("avares://SmailAvalonia/Assets/Icons/sms.png");
-    private static readonly Bitmap EmailBitmap = new("avares://SmailAvalonia/Assets/Icons/email.png");
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public class TypeToIconConverter : IValueConverter
     {
-        Bitmap? bitmap = value switch
+        // Optional: Make it a singleton for better performance (common pattern in Avalonia)
+        public static readonly TypeToIconConverter Instance = new();
+
+        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            TransmissionType.SMS => SmsBitmap,
-            TransmissionType.Email => EmailBitmap,
-            _ => null
-        };
+            // Optional safety: If Application.Current is null (very rare after app startup),
+            // return a fallback geometry or null
+            if (Application.Current == null)
+                return null; // or return some default StreamGeometry
 
-        return bitmap; // <-- Create a Bitmap from the URI
-    }
+            if (value is TransmissionType type)
+            {
+                return type switch
+                {
+                    TransmissionType.Email => Application.Current.FindResource("mail_regular"),
+                    TransmissionType.SMS => Application.Current.FindResource("sms_regular"),
+                    _ => Application.Current.FindResource("mail_regular") // fallback to mail
+                };
+            }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
+            // Fallback if value isn't a string
+            return Application.Current.FindResource("mail_regular");
+        }
+
+        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+            => throw new NotImplementedException(); // One-way binding, so no need
     }
 }

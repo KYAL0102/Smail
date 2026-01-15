@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Core;
 using Core.Models;
+using Core.Services;
 using SmailAvalonia.Views;
 using SmailAvalonia.Services;
 
@@ -39,6 +40,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public async Task InitializeDataAsync()
     {
         await WsClientService.Instance.ConnectToServerWsHub();
+
+        //TODO: This is a temporary solution. Implement input
+        Console.WriteLine("Requesting websocket key update...");
+        await WsClientService.Instance.UpdateWebhookSigningKey("tZSihgTH");
+        SecurityVault.Instance.SetGateWayEncryptionPhrase("pwd");
     }
 
     public async Task OnShutdownAsync()
