@@ -68,9 +68,8 @@ public class AuthenticationViewModel : ViewModelBase
     }
 
     public RelayCommand StartMessageConfigurationCommand { get; init; }
-    public AuthenticationViewModel(MessagePayload? payload = null)
+    public AuthenticationViewModel()
     {
-        _payload = payload;
         StartMessageConfigurationCommand = new(
             async() => await StartMessageConfiguration(),
             () => true
@@ -124,8 +123,7 @@ public class AuthenticationViewModel : ViewModelBase
 
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToRecepientConfigurationAction,
-            Data = _payload ?? new MessagePayload()
+            Action = Globals.NavigateToRecepientConfigurationAction
         });
     }
 }

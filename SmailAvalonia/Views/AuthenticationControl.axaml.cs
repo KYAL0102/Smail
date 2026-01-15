@@ -11,10 +11,10 @@ namespace SmailAvalonia.Views;
 public partial class AuthenticationControl : UserControl
 {
     private AuthenticationViewModel _viewModel;
-    public AuthenticationControl(MessagePayload? payload = null)
+    public AuthenticationControl()
     {
         InitializeComponent();
-        _viewModel = new(payload);
+        _viewModel = new();
         DataContext = _viewModel;
         Loaded += UserControl_Loaded;
     }

@@ -13,12 +13,10 @@ namespace SmailAvalonia.ViewModels;
 
 public class PayloadExecutionViewModel: ViewModelBase
 {
-    public MessagePayload Payload { get; init; }
-    private Session Session { get; init; }
-    public PayloadExecutionViewModel(Session session, MessagePayload payload)
+    private Session _session { get; init; }
+    public PayloadExecutionViewModel(Session session)
     {
-        Session = session;
-        Payload = payload;
+        _session = session;
     }
 
     public ObservableCollection<ContactSendStatus> ContactStates { get; init; } = [];
@@ -27,23 +25,23 @@ public class PayloadExecutionViewModel: ViewModelBase
     {
         RegisterToWebsocketEvent();
 
-        var emailContacts = Payload.Contacts
+        var emailContacts = _session.Payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
             .Select(kvp => kvp.Key.Email)
             .ToList();
         
-        var smsContacts = Payload.Contacts
+        var smsContacts = _session.Payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.SMS)
             .Select(kvp => kvp.Key.MobileNumber)
             .ToList();
         
-        var message = Payload.Message;
+        var message = _session.Payload.Message;
 
-        var smsRecipients = await Session.SmsService.SendMessageAsync(message, smsContacts);
+        var smsRecipients = await _session.SmsService.SendMessageAsync(message, smsContacts);
         smsRecipients
         .Select(r => {
             Enum.TryParse<SendStatus>(r.State, true, out var status);
-            var contact = Payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
+            var contact = _session.Payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
             return contact is null ? null : new ContactSendStatus {
                 TransmissionType = TransmissionType.SMS,
                 Contact = contact,

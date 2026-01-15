@@ -11,10 +11,10 @@ namespace SmailAvalonia.Views;
 public partial class PayloadExecutionControl : UserControl
 {
     private PayloadExecutionViewModel _viewModel;
-    public PayloadExecutionControl(Session session, MessagePayload payload)
+    public PayloadExecutionControl(Session session)
     {
         InitializeComponent();
-        _viewModel = new(session, payload);
+        _viewModel = new(session);
         DataContext = _viewModel;
         Loaded += UserControl_Loaded;
     }

@@ -11,10 +11,10 @@ namespace SmailAvalonia.Views;
 public partial class PayloadSummaryControl : UserControl
 {
     private PayloadSummaryViewModel _viewModel;
-    public PayloadSummaryControl(MessagePayload? payload = null)
+    public PayloadSummaryControl(Session session)
     {
         InitializeComponent();
-        _viewModel = new(payload);
+        _viewModel = new(session);
         DataContext = _viewModel;
         Loaded += UserControl_Loaded;
     }

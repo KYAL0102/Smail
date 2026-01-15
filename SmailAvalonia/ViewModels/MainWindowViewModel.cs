@@ -6,6 +6,7 @@ using Core.Models;
 using Core.Services;
 using SmailAvalonia.Views;
 using SmailAvalonia.Services;
+using CommunityToolkit.Mvvm.Input;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -13,7 +14,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly Window? _window;
     private UserControl? _currentPage = null;
-    private Session? _currentSession { get; set; } = null;
+    private Session? _currentSession = null;
     public UserControl? CurrentPage
     {
         get { return _currentPage; }
@@ -24,17 +25,25 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public RelayCommand GoToSettingsCommand { get; set; }
+
     public MainWindowViewModel(Window? window = null)
     {
         _window = window;
         CurrentPage = new AuthenticationControl();
         
         Messenger.Subscribe(Globals.NewSessionAction, message => AssignNewSession(message.Data));
-        Messenger.Subscribe(Globals.NavigateToAuthenticationAction, message => NavigateToAuthentication(message.Data));
-        Messenger.Subscribe(Globals.NavigateToMessageConfigurationAction, message => NavigateToPayloadConfiguration(message.Data));
-        Messenger.Subscribe(Globals.NavigateToRecepientConfigurationAction, message => NavigateToRecepientsConfiguration(message.Data));
-        Messenger.Subscribe(Globals.NavigateToPayloadSummaryAction, message => NavigateToPayloadSummary(message.Data));
-        Messenger.Subscribe(Globals.NavigateToExecutionAction, message => NavigateToExecution(message.Data));
+        Messenger.Subscribe(Globals.NavigateToAuthenticationAction, _ => NavigateToAuthentication());
+        Messenger.Subscribe(Globals.NavigateToMessageConfigurationAction, _ => NavigateToPayloadConfiguration());
+        Messenger.Subscribe(Globals.NavigateToRecepientConfigurationAction, _ => NavigateToRecepientsConfiguration());
+        Messenger.Subscribe(Globals.NavigateToPayloadSummaryAction, _ => NavigateToPayloadSummary());
+        Messenger.Subscribe(Globals.NavigateToExecutionAction, _ => NavigateToExecution());
+
+        GoToSettingsCommand = new
+        (
+            NavigateToSettings,
+            () => true
+        );
     }
 
     public async Task InitializeDataAsync()
@@ -60,34 +69,38 @@ public partial class MainWindowViewModel : ViewModelBase
         if(obj is Session session) _currentSession = session;
     }
 
-    private void NavigateToAuthentication(object? data)
+    private void NavigateToSettings()
     {
-        if (data is MessagePayload payload) CurrentPage = new AuthenticationControl(payload); 
+        CurrentPage = new SettingsControl();
     }
 
-    private void NavigateToRecepientsConfiguration(object? obj)
+    private void NavigateToAuthentication()
     {
-        if(obj is MessagePayload payload) CurrentPage = new RecepientConfiguration(payload);
+        CurrentPage = new AuthenticationControl(); 
     }
 
-    private void NavigateToPayloadConfiguration(object? obj)
+    private void NavigateToRecepientsConfiguration()
+    {
+        if (_currentSession != null ) CurrentPage = new RecepientConfiguration(_currentSession);
+    }
+
+    private void NavigateToPayloadConfiguration()
     {
         /*if (_window != null && _oldWindowState != null)
         {
             _window.CanResize = true;
             _window.WindowState = (WindowState)_oldWindowState;
         }*/
-        if (obj is MessagePayload payload) CurrentPage = new MessageConfigurationControl(payload);
+        if (_currentSession != null ) CurrentPage = new MessageConfigurationControl(_currentSession);
     }
     
-    private void NavigateToPayloadSummary(object? obj)
+    private void NavigateToPayloadSummary()
     {
-        if (obj is MessagePayload payload) CurrentPage = new PayloadSummaryControl(payload);
+        if (_currentSession != null ) CurrentPage = new PayloadSummaryControl(_currentSession);
     }
 
-    private void NavigateToExecution(object? obj)
+    private void NavigateToExecution()
     {
-        if (_currentSession == null ) return;
-        if (obj is MessagePayload payload) CurrentPage = new PayloadExecutionControl(_currentSession, payload);
+        if (_currentSession != null ) CurrentPage = new PayloadExecutionControl(_currentSession);
     }
 }

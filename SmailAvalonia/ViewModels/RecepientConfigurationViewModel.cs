@@ -15,7 +15,7 @@ namespace SmailAvalonia.ViewModels;
 
 public class RecepientConfigurationViewModel: ViewModelBase
 {
-    private MessagePayload _payload;
+    private Session _session;
     private RecepientConfiguration _userControl;
     private List<Contact> AllContacts { get; } = new()
     {
@@ -77,10 +77,10 @@ public class RecepientConfigurationViewModel: ViewModelBase
             OnPropertyChanged();
         }
     }
-    public RecepientConfigurationViewModel(RecepientConfiguration userControl, MessagePayload payload)
+    public RecepientConfigurationViewModel(RecepientConfiguration userControl, Session session)
     {
         _userControl = userControl;
-        _payload = payload;
+        _session = session;
         PreviousBatchCommand = new(
             PrevPage,
             () => CurrentStartIndex > 0
@@ -109,7 +109,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
         );
 
         AllContacts.Clear();
-        AllContacts.AddRange(payload.Contacts.Keys);
+        AllContacts.AddRange(_session.Payload.Contacts.Keys);
     }
 
     public async Task InitializeDataAsync()
@@ -229,8 +229,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
 
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToMessageConfigurationAction,
-            Data = _payload
+            Action = Globals.NavigateToMessageConfigurationAction
         });
     }
 
@@ -260,7 +259,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
             finallist[contact] = type;
         }
 
-        _payload.Contacts = finallist;
+        _session.Payload.Contacts = finallist;
     }
 
     private void NavigateOneStepBack()
@@ -269,8 +268,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
 
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToAuthenticationAction,
-            Data = _payload
+            Action = Globals.NavigateToAuthenticationAction
         });
     }
 }

@@ -11,10 +11,10 @@ namespace SmailAvalonia.Views;
 public partial class RecepientConfiguration : UserControl
 {
     private RecepientConfigurationViewModel _viewModel;
-    public RecepientConfiguration(MessagePayload payload)
+    public RecepientConfiguration(Session session)
     {
         InitializeComponent();
-        _viewModel = new(this, payload);
+        _viewModel = new(this, session);
         DataContext = _viewModel;
 
         Loaded += UserControl_Loaded;

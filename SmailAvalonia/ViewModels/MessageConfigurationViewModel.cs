@@ -15,7 +15,7 @@ namespace SmailAvalonia.ViewModels;
 
 public class MessageConfigurationViewModel: ViewModelBase
 {
-    private MessagePayload _payload;
+    private Session _session;
     public RelayCommand ContinueToSummaryCommand { get; init; }
     public RelayCommand OneStepBack { get; init; }
 
@@ -31,10 +31,10 @@ public class MessageConfigurationViewModel: ViewModelBase
     }
 
     private UserControl _userControl { get; init; }
-    public MessageConfigurationViewModel(UserControl userControl, MessagePayload payload)
+    public MessageConfigurationViewModel(UserControl userControl, Session session)
     {
         _userControl = userControl;
-        _payload = payload;
+        _session = session;
         
         ContinueToSummaryCommand = new(
             ContinueToPayloadSummary,
@@ -44,7 +44,7 @@ public class MessageConfigurationViewModel: ViewModelBase
             NavigateToPreviousStep
         );
 
-        Message = payload.Message;
+        Message = _session.Payload.Message;
     }
 
     public async Task InitializeDataAsync()
@@ -54,23 +54,21 @@ public class MessageConfigurationViewModel: ViewModelBase
 
     private void ContinueToPayloadSummary()
     {
-        _payload.Message = Message;
+        _session.Payload.Message = Message;
         
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToPayloadSummaryAction,
-            Data = _payload
+            Action = Globals.NavigateToPayloadSummaryAction
         });
     }
 
     private void NavigateToPreviousStep()
     {
-        _payload.Message = Message;
+        _session.Payload.Message = Message;
 
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToRecepientConfigurationAction,
-            Data = _payload
+            Action = Globals.NavigateToRecepientConfigurationAction
         });
     }
 }

@@ -27,7 +27,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal">
-            <Button>
+            <Button Command="{Binding GoToSettingsCommand}">
                 <PathIcon Data="{StaticResource settings_regular}"
                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
             </Button>

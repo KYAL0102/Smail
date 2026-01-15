@@ -10,6 +10,19 @@ namespace SmailAvalonia.ViewModels;
 
 public class PayloadSummaryViewModel: ViewModelBase
 {
+    private readonly Session _session;
+
+    private string _message = string.Empty;
+    public string Message
+    {
+        get => _message;
+        set
+        {
+            _message = value;
+            OnPropertyChanged();
+        }
+    }
+
     private int _smsContactsAmount = -1;
     public int SmsContactsAmount
     {
@@ -36,23 +49,12 @@ public class PayloadSummaryViewModel: ViewModelBase
     }
     public string EmailContactsSentence => $"{_emailContactsAmount} contacts will receive this via";
 
-    private double _estimatedTimeForExecution = -1;
-    public double EstimatedTimeForExecution
-    {
-        get => _estimatedTimeForExecution;
-        set
-        {
-            _estimatedTimeForExecution = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public MessagePayload Payload { get; init; }
     public RelayCommand BackToConfigurationCommand { get; set; }
     public RelayCommand ExecutePayloadCommand { get; set; }
-    public PayloadSummaryViewModel(MessagePayload? payload = null)
+    public PayloadSummaryViewModel(Session session)
     {
-        Payload = payload == null ? new() : payload;
+        _session = session;
+        EvaluateAmountOfTransmissionTypes();
 
         BackToConfigurationCommand = new(
             BackToConfiguration
@@ -64,7 +66,6 @@ public class PayloadSummaryViewModel: ViewModelBase
 
     public async Task InitializeDataAsync()
     {
-        EvaluateAmountOfTransmissionTypes();
         await Task.CompletedTask;
     }
 
@@ -72,39 +73,21 @@ public class PayloadSummaryViewModel: ViewModelBase
     {
         Messenger.Publish(new Message
         {
-            Action = Globals.NavigateToExecutionAction,
-            Data = Payload
+            Action = Globals.NavigateToExecutionAction
         });
-    }
-
-    /// <summary>
-    /// Estimates the time to send messages to all contacts.
-    /// </summary>
-    /// <param name="smsCount">Number of contacts to send SMS to.</param>
-    /// <param name="emailCount">Number of contacts to send Email to.</param>
-    /// <param name="smsDelayMs">Delay between SMS messages in milliseconds.</param>
-    /// <param name="emailDelayMs">Delay between Email messages in milliseconds.</param>
-    /// <returns>Estimated TimeSpan for the whole operation.</returns>
-    public TimeSpan EstimateSendTime(int smsCount, int emailCount, int smsDelayMs = 200, int emailDelayMs = 500)
-    {
-        // Total milliseconds
-        double totalMs = (smsCount * smsDelayMs) + (emailCount * emailDelayMs);
-
-        return TimeSpan.FromMilliseconds(totalMs);
     }
 
     private void BackToConfiguration()
     {
         Messenger.Publish(new Message{
-            Action = Globals.NavigateToMessageConfigurationAction,
-            Data = Payload
+            Action = Globals.NavigateToMessageConfigurationAction
         });
     }
 
     private void EvaluateAmountOfTransmissionTypes()
     {
-        SmsContactsAmount = Payload.Contacts.Where(c => c.Value == TransmissionType.SMS).Count();
-        EmailContactsAmount = Payload.Contacts.Where(c => c.Value == TransmissionType.Email).Count();
-        EstimatedTimeForExecution = EstimateSendTime(SmsContactsAmount, EmailContactsAmount).Seconds;
+        Message = _session.Payload.Message;
+        SmsContactsAmount = _session.Payload.Contacts.Where(c => c.Value == TransmissionType.SMS).Count();
+        EmailContactsAmount = _session.Payload.Contacts.Where(c => c.Value == TransmissionType.Email).Count();
     }
 }

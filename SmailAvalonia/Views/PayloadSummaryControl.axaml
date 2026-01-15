@@ -14,7 +14,6 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*"/>
@@ -25,7 +24,7 @@
 
     <Label Grid.Row="1" Grid.Column="0" Content="Message:"/>
     <Border Grid.Row="2" Grid.Column="0" BorderBrush="White" BorderThickness="1" CornerRadius="5">
-      <TextBlock Text="{Binding Payload.Message}"
+      <TextBlock Text="{Binding Message}"
                  TextWrapping="Wrap" Height="200"/>
     </Border>
 
@@ -46,14 +45,8 @@
         <Label Content="Email" VerticalAlignment="Center" HorizontalAlignment="Center"/>
       </StackPanel>
     </Grid>
-
-    <StackPanel Grid.Row="5" Grid.Column="0" Orientation="Horizontal">
-      <Label Content="The execution is estimated to take"/>
-      <Label Content="{Binding EstimatedTimeForExecution}"/>
-      <Label Content="seconds"/>
-    </StackPanel>
     
-    <UniformGrid Grid.Row="6" Grid.Column="0" Columns="2">
+    <UniformGrid Grid.Row="5" Grid.Column="0" Columns="2">
       <Button Content="Back" HorizontalAlignment="Left" Command="{Binding BackToConfigurationCommand}"/>
       <Button Content="Send" HorizontalAlignment="Right" Command="{Binding ExecutePayloadCommand}"/>
     </UniformGrid>
