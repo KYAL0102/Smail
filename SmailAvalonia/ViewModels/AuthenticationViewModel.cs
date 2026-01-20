@@ -5,12 +5,13 @@ using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
 using Core.Services;
+using Avalonia.Controls;
 
 namespace SmailAvalonia.ViewModels;
 
 public class AuthenticationViewModel : ViewModelBase
 {
-    private MessagePayload? _payload = null;
+    private Window? _window = null;
 
     private string _sgIp = string.Empty;
     public string SgIP
@@ -67,12 +68,25 @@ public class AuthenticationViewModel : ViewModelBase
         }
     }
 
-    public RelayCommand StartMessageConfigurationCommand { get; init; }
-    public AuthenticationViewModel()
+    private bool _canApply = true;
+    public bool CanApply 
     {
-        StartMessageConfigurationCommand = new(
-            async() => await StartMessageConfiguration(),
-            () => true
+        get => _canApply;
+        set
+        {
+            _canApply = value;
+            OnPropertyChanged();
+            ApplyDataCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    public RelayCommand ApplyDataCommand { get; init; }
+    public AuthenticationViewModel(Window? window = null)
+    {
+        _window = window;
+        ApplyDataCommand = new(
+            async() => await ApplyDataAsync(),
+            () => CanApply
         );
     }
 
@@ -81,32 +95,26 @@ public class AuthenticationViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    private async Task StartMessageConfiguration()
+    private async Task ApplyDataAsync()
     {
-        var parseSuccess = int.TryParse(SgPort, out var port);
-        if (!parseSuccess) port = 8080;
-        
-        //SgUsername, SgPassword
-        SecurityVault.Instance.SetGateWayCredentials(SgUsername, SgPassword);
-        SmsService smsService = new(SgIP, port);
-        
+        CanApply = false;
+        SmsService? smsService = null;
         try
         {
-            var response = await smsService.IsDeviceReachableAsync();
-
-            if (response == null || !response.IsSuccessStatusCode) 
-            {
-                if (response == null) ErrorMessage = "An unknown error occured.";
-                else ErrorMessage = $"{response.ReasonPhrase} ({response.StatusCode})";
-                return;
-            }
-        } 
-        catch (Exception e) 
-        {
-            //Console.WriteLine(e.Message);
-            ErrorMessage = e.Message;
-            return;
+            smsService = await SmsService.CreateNewInstance(SgIP, SgPort, SgUsername, SgPassword);
         }
+        catch(Exception e)
+        {
+            ErrorMessage = $"{e.Message}";
+        }
+        finally
+        {
+            CanApply = true;
+        }
+
+        if (smsService == null) return;
+
+        SecurityVault.Instance.SetGateWayCredentials(SgUsername, SgPassword);
 
         _ = Task.Run(smsService.RegisterWebhooks);
 
@@ -125,5 +133,7 @@ public class AuthenticationViewModel : ViewModelBase
         {
             Action = Globals.NavigateToRecepientConfigurationAction
         });
+
+        _window?.Close();
     }
 }

@@ -7,19 +7,20 @@ using System.Text.Json;
 using ClosedXML.Parser;
 using Core.Models.ApiResponseClasses;
 using Core.Models;
+using System.Net;
 
 namespace Core.Services;
 
 public class SmsService
 {
     private string _authToken = string.Empty;
-    private readonly string _deviceIP;
-    private readonly int _port;
+    public string DeviceIP { get; private set; }
+    public string Port { get; private set; }
     private readonly HttpClient _httpClient;
     private ConcurrentBag<Webhook> _webhooks = [];
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public SmsService(string ipAddress, int port)
+    public SmsService(string ipAddress, string port, string? usr = null, string? pwd = null)
     {
         var handler = new HttpClientHandler
         {
@@ -32,25 +33,81 @@ public class SmsService
             WriteIndented = true
         };
 
-        UpdateToken();
+        UpdateToken(usr, pwd);
 
-        _deviceIP = ipAddress;
-        _port = port;
+        DeviceIP = ipAddress;
+        Port = port;
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authToken);
     }
 
-    private void UpdateToken()
+    public static async Task<SmsService> CreateNewInstance(string ipAddress, string port, string usr, string pwd)
     {
-        var usr = SecurityVault.Instance.GetUsername();
-        using var pwd = SecurityVault.Instance.GetGatewayPassword();
+        await TestArguments(ipAddress, port, usr, pwd);
+        return new SmsService(ipAddress, port, usr, pwd);
+    }
 
-        if (usr == string.Empty || pwd.Value == null) 
+    public async Task UpdateGatewayParameters(string? ipAddress = null, string? port = null, string? usr = null, string? pwd = null)
+    {
+        if (ipAddress == null && port == null && usr == null && pwd == null) return;
+        
+        ipAddress ??= DeviceIP;
+        port      ??= Port;
+        usr       ??= SecurityVault.Instance.GetUsername();
+        if (pwd == null)
+        {
+            using var secret = SecurityVault.Instance.GetGatewayPassword();
+            pwd = secret.Value ?? string.Empty;
+        }
+
+        await TestArguments(ipAddress, port, usr, pwd);
+
+        DeviceIP = ipAddress;
+        Port = port;
+        UpdateToken(usr, pwd);
+        SecurityVault.Instance.SetGateWayCredentials(usr, pwd);
+    }
+
+    public static async Task TestArguments(string ipAddress, string port, string usr, string pwd)
+    {
+        var token = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{usr}:{pwd}"));
+
+        var response = await IsDeviceReachableAsync(ipAddress, port, token);
+
+        if (response == null) 
+        {
+            Console.WriteLine("Response was null");
+            return;
+        }
+        else if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"{response.StatusCode} - {response.ReasonPhrase}");
+    }
+
+    private static async Task<HttpResponseMessage?> IsDeviceReachableAsync(string ip, string port, string? token = null)
+    {
+        var httpClient = new HttpClient();
+        if (token != null) httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", token);
+        var url = $"http://{ip}:{port}/";
+        var response = await httpClient.GetAsync(url);
+        return response;
+    }
+
+    private void UpdateToken(string? username = null, string? password = null)
+    {
+        var usr = username ?? SecurityVault.Instance.GetUsername();
+        string? pwd;
+        if (password != null) pwd = password;
+        else
+        {
+            using var vaultPwd = SecurityVault.Instance.GetGatewayPassword();
+            pwd = vaultPwd.Value;
+        }
+
+        if (usr == string.Empty || pwd == null) 
         {
             Console.WriteLine($"Either username was empty or password was null.");
             return;
         }
 
-        _authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{usr}:{pwd.Value}"));
+        _authToken = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{usr}:{pwd}"));
     }
 
     public async Task DeregisterWebhooksAsync()
@@ -60,7 +117,7 @@ public class SmsService
         {
             var task = Task.Run(async () => 
             {
-                var url = $"http://{_deviceIP}:{_port}/webhooks/{wh.Id}";
+                var url = $"http://{DeviceIP}:{Port}/webhooks/{wh.Id}";
 
                 var response = await _httpClient.DeleteAsync(url);
 
@@ -75,7 +132,7 @@ public class SmsService
     public async Task RegisterWebhooks()
     {
         var serverUrl = $"https://{NetworkManager.GetLocalIPv4()}:5001/api/webhook"; //TODO: get port somehow else
-        var phoneUrl = $"http://{_deviceIP}:{_port}/webhooks";
+        var phoneUrl = $"http://{DeviceIP}:{Port}/webhooks";
 
         string[] toRegisterEvents = [ "sms:failed", "sms:sent", "sms:delivered" ];
 
@@ -119,7 +176,7 @@ public class SmsService
 
     public async Task<List<Recipient>> SendMessageAsync(string message, List<string> numbers)
     {
-        var url = $"http://{_deviceIP}:{_port}/message";
+        var url = $"http://{DeviceIP}:{Port}/message";
 
         using var aesPassphraseAccessor = SecurityVault.Instance.GetAesPassphrase();
         var aesPassphrase = aesPassphraseAccessor.Value ?? string.Empty;
@@ -152,13 +209,6 @@ public class SmsService
         }
 
         return recipients;
-    }
-
-    public async Task<HttpResponseMessage?> IsDeviceReachableAsync()
-    {
-        var url = $"http://{_deviceIP}:{_port}/";
-        var response = await _httpClient.GetAsync(url);
-        return response;
     }
 
 }

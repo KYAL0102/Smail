@@ -6,5 +6,54 @@
              x:Class="SmailAvalonia.Views.SettingsControl"
              xmlns:vm="using:SmailAvalonia.ViewModels"
              x:DataType="vm:SettingsViewModel">
-  Welcome to Avalonia!
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="3*"/>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="1*"/>
+    </Grid.ColumnDefinitions>
+
+    <!--Sms Gateway Credentials-->
+    <Label Content="SMS-Gateway" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4"/>
+
+    <Label Content="Domain:" Grid.Row="1" Grid.Column="0"/>
+    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SgIP, Mode=TwoWay}"/>
+
+    <Label Content="Port:" Grid.Row="1" Grid.Column="2"/>
+    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SgPort, Mode=TwoWay}"/>
+
+    <Label Content="Username:" Grid.Row="2" Grid.Column="0"/>
+    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding SgUsername, Mode=TwoWay}"/>
+
+    <Label Content="Password:" Grid.Row="3" Grid.Column="0"/>
+    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
+
+    <!--Encryption Passphrase-->
+    <Label Content="Encryption Passphrase:" Grid.Row="4" Grid.Column="0"/>
+    <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding EncryptionPassphrase, Mode=TwoWay}"/>
+
+    <!--Webhook Signing Key-->
+    <Label Content="Websocket Signing Key:" Grid.Row="5" Grid.Column="0"/>
+    <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding WebhookSigningKey, Mode=TwoWay}"/>
+
+    <Label Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" 
+          Foreground="Red"
+          Content="{Binding ErrorMessage, Mode=TwoWay}"/>
+    
+    <Button Grid.Row="6" Grid.Column="2" Content="Reset" HorizontalAlignment="Right" 
+            Command="{Binding ResetDataCommand}"/>
+    
+    <Button Grid.Row="6" Grid.Column="3" Content="Apply" HorizontalAlignment="Right" 
+            Command="{Binding SaveDataCommand}"/>
+  </Grid>
 </UserControl>
