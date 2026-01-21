@@ -17,10 +17,16 @@ public partial class SettingsControl : UserControl
         DataContext = _viewModel;
 
         Loaded += UserControl_Loaded;
+        Unloaded += UserControl_Unloaded;
     }
 
     private async void UserControl_Loaded(object? sender, RoutedEventArgs e)
     {
         await _viewModel.InitializeDataAsync();
+    }
+
+    private async void UserControl_Unloaded(object? sender, RoutedEventArgs e)
+    {
+        await _viewModel.OnUnloadAsync();
     }
 }

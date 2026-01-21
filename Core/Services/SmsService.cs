@@ -45,7 +45,7 @@ public class SmsService
         await TestArguments(ipAddress, port, usr, pwd);
         return new SmsService(ipAddress, port, usr, pwd);
     }
-
+    
     public async Task UpdateGatewayParameters(string? ipAddress = null, string? port = null, string? usr = null, string? pwd = null)
     {
         if (ipAddress == null && port == null && usr == null && pwd == null) return;

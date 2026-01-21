@@ -5,6 +5,8 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using SmailAvalonia.Services;
 using Avalonia.Controls;
+using SmailAvalonia.Views;
+using System.Collections.Generic;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -13,49 +15,7 @@ public class SettingsViewModel : ViewModelBase
     private Session _session;
     private Window? _window;
 
-    private string _sgIp = string.Empty;
-    public string SgIP
-    {
-        get => _sgIp;
-        set
-        {
-            _sgIp = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _sgPort = "8080";
-    public string SgPort
-    {
-        get => _sgPort;
-        set
-        {
-            _sgPort = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _sgUsrName = string.Empty;
-    public string SgUsername
-    {
-        get => _sgUsrName;
-        set
-        {
-            _sgUsrName = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _sgPwd = string.Empty;
-    public string SgPassword
-    {
-        get => _sgPwd;
-        set
-        {
-            _sgPwd = value;
-            OnPropertyChanged();
-        }
-    }
+    public SmsGatewayInput? SmsInput { get; } = null;
 
     private string _encrPassphrase = string.Empty;
     public string EncryptionPassphrase
@@ -75,17 +35,6 @@ public class SettingsViewModel : ViewModelBase
         set
         {
             _whSigningKey = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _errorMsg = string.Empty;
-    public string ErrorMessage
-    {
-        get => _errorMsg;
-        set
-        {
-            _errorMsg = value;
             OnPropertyChanged();
         }
     }
@@ -110,6 +59,8 @@ public class SettingsViewModel : ViewModelBase
         _session = session;
         _window = window;
 
+        SmsInput = new(_session);
+
         ResetDataCommand = new(ResetData);
         SaveDataCommand = new
         (
@@ -125,46 +76,32 @@ public class SettingsViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    private async Task TestGateWayArguments()
+    public async Task OnUnloadAsync()
     {
-        try
-        {
-            await SmsService.TestArguments(SgIP, SgPort, SgUsername, SgPassword);
-        }
-        catch(Exception e)
-        {
-            ErrorMessage = $"{e.Message}";
-        }
+        if(SmsInput != null) await SmsInput.AwaitAllTasksAsync();
     }
 
     private void ResetData()
     {
-        SgIP = _session.SmsService.DeviceIP;
-        SgPort = $"{_session.SmsService.Port}";
-        SgUsername = SecurityVault.Instance.GetUsername();
-        SgPassword = SecurityVault.Instance.GetGatewayPassword().Value ?? string.Empty;
+        SmsInput?.ResetData();
         EncryptionPassphrase = SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty;
         WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     private async Task SaveDataAsync()
     {
-        try
-        {
-            CanApply = false;
-            await _session.SmsService.UpdateGatewayParameters(SgIP, SgPort, SgUsername, SgPassword);
-            await WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey);
-            SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
-            SecurityVault.Instance.SetGateWayEncryptionPhrase(EncryptionPassphrase);
-        }
-        catch(Exception e)
-        {
-            ErrorMessage = $"{e.Message}";
-        }
-        finally
-        {
-            CanApply = true;
-        }
-        
+        CanApply = false;
+
+        var tasks = new List<Task>();
+
+        if(SmsInput != null) tasks.Add(SmsInput.ConfirmParameterChangesAsync());
+
+        tasks.Add(WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey));
+        SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
+        SecurityVault.Instance.SetGateWayEncryptionPhrase(EncryptionPassphrase);
+
+        await Task.WhenAll(tasks);
+
+        CanApply = true;
     }
 }

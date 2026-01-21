@@ -6,6 +6,7 @@ using Core;
 using Core.Models;
 using Core.Services;
 using Avalonia.Controls;
+using SmailAvalonia.Views;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -13,60 +14,7 @@ public class AuthenticationViewModel : ViewModelBase
 {
     private Window? _window = null;
 
-    private string _sgIp = string.Empty;
-    public string SgIP
-    {
-        get => _sgIp;
-        set
-        {
-            _sgIp = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _sgPort = "8080";
-    public string SgPort
-    {
-        get => _sgPort;
-        set
-        {
-            _sgPort = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _sgUsrName = string.Empty;
-    public string SgUsername
-    {
-        get => _sgUsrName;
-        set
-        {
-            _sgUsrName = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _sgPwd = string.Empty;
-    public string SgPassword
-    {
-        get => _sgPwd;
-        set
-        {
-            _sgPwd = value;
-            OnPropertyChanged();
-        }
-    }
-
-    private string _errorMsg = string.Empty;
-    public string ErrorMessage
-    {
-        get => _errorMsg;
-        set
-        {
-            _errorMsg = value;
-            OnPropertyChanged();
-        }
-    }
+    public SmsGatewayInput SmsInput { get; } = new();
 
     private bool _canApply = true;
     public bool CanApply 
@@ -98,25 +46,10 @@ public class AuthenticationViewModel : ViewModelBase
     private async Task ApplyDataAsync()
     {
         CanApply = false;
-        SmsService? smsService = null;
-        try
-        {
-            smsService = await SmsService.CreateNewInstance(SgIP, SgPort, SgUsername, SgPassword);
-        }
-        catch(Exception e)
-        {
-            ErrorMessage = $"{e.Message}";
-        }
-        finally
-        {
-            CanApply = true;
-        }
-
+        SmsService? smsService = await SmsInput.CreateSmsServiceAsync();
+        CanApply = true;
+        
         if (smsService == null) return;
-
-        SecurityVault.Instance.SetGateWayCredentials(SgUsername, SgPassword);
-
-        _ = Task.Run(smsService.RegisterWebhooks);
 
         Messenger.Publish(new Message
         {
@@ -126,8 +59,8 @@ public class AuthenticationViewModel : ViewModelBase
                 SmsService = smsService
             }
         });
-        SgUsername = string.Empty;
-        SgPassword = string.Empty;
+
+        await SmsInput.AwaitAllTasksAsync();
 
         Messenger.Publish(new Message
         {

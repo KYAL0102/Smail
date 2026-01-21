@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:SmailAvalonia.ViewModels"
+             xmlns:views="using:SmailAvalonia.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SmailAvalonia.Views.AuthenticationControl"
              x:DataType="vm:AuthenticationViewModel">
@@ -10,36 +11,11 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="Auto"/>
-      <ColumnDefinition Width="3*"/>
-      <ColumnDefinition Width="Auto"/>
-      <ColumnDefinition Width="1*"/>
-    </Grid.ColumnDefinitions>
 
-    <Label Content="SMS-Gateway" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4"/>
-
-    <Label Content="Domain:" Grid.Row="1" Grid.Column="0"/>
-    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SgIP, Mode=TwoWay}"/>
-
-    <Label Content="Port:" Grid.Row="1" Grid.Column="2"/>
-    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding SgPort, Mode=TwoWay}"/>
-
-    <Label Content="Username:" Grid.Row="2" Grid.Column="0"/>
-    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding SgUsername, Mode=TwoWay}"/>
-
-    <Label Content="Password:" Grid.Row="3" Grid.Column="0"/>
-    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
-
-    <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
-          Foreground="Red"
-          Content="{Binding ErrorMessage, Mode=TwoWay}"/>
+    <ContentControl Grid.Row="0" Content="{Binding SmsInput}"/>
     
-    <Button Grid.Row="4" Grid.Column="3" Content="Apply" HorizontalAlignment="Right" 
+    <Button Grid.Row="1" Content="Apply" HorizontalAlignment="Right" 
             Command="{Binding ApplyDataCommand}"/>
   </Grid>
 </UserControl>
