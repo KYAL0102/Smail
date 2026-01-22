@@ -7,5 +7,7 @@
   <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Duende.IdentityModel.OidcClient" Version="7.0.0" />
+    <PackageReference Include="MailKit" Version="4.14.1" />
   </ItemGroup>
 </Project>

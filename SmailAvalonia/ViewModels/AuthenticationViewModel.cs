@@ -12,9 +12,20 @@ namespace SmailAvalonia.ViewModels;
 
 public class AuthenticationViewModel : ViewModelBase
 {
-    private Window? _window = null;
+    private readonly Window? _window = null;
 
-    public SmsGatewayInput SmsInput { get; } = new();
+    private UserControl _currentControl = new SmsGatewayInput();
+    public UserControl CurrentControl 
+    { 
+        get => _currentControl;
+        private set
+        {
+            _currentControl = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private Session? _sessionInMaking = null;
 
     private bool _canApply = true;
     public bool CanApply 
@@ -46,21 +57,34 @@ public class AuthenticationViewModel : ViewModelBase
     private async Task ApplyDataAsync()
     {
         CanApply = false;
-        SmsService? smsService = await SmsInput.CreateSmsServiceAsync();
-        CanApply = true;
-        
-        if (smsService == null) return;
+        if (CurrentControl is SmsGatewayInput smsInput)
+        {
+            SmsService? smsService = await smsInput.CreateSmsServiceAsync();
+
+            if (smsService != null) 
+            {
+                _sessionInMaking = new Session
+                {
+                    SmsService = smsService
+                };
+            }
+            await smsInput.AwaitAllTasksAsync();
+            CurrentControl = new EmailInput();
+
+            CanApply = true;
+
+            return;
+        }
+        else if(CurrentControl is EmailInput emailInput)
+        {
+            //TODO
+        }
 
         Messenger.Publish(new Message
         {
             Action = Globals.NewSessionAction,
-            Data = new Session
-            {
-                SmsService = smsService
-            }
+            Data = _sessionInMaking
         });
-
-        await SmsInput.AwaitAllTasksAsync();
 
         Messenger.Publish(new Message
         {

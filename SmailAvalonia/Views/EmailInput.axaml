@@ -2,20 +2,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="using:SmailAvalonia.ViewModels"
-             xmlns:views="using:SmailAvalonia.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="SmailAvalonia.Views.AuthenticationControl"
-             x:DataType="vm:AuthenticationViewModel">
+             x:Class="SmailAvalonia.EmailInput"
+             xmlns:vm="using:SmailAvalonia.ViewModels"
+             x:DataType="vm:EmailInputViewModel">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
 
-    <ContentControl Grid.Row="0" Content="{Binding CurrentControl}"/>
-    
-    <Button Grid.Row="1" Content="Confirm" HorizontalAlignment="Right" 
-            Command="{Binding ApplyDataCommand}"/>
+    <Label Grid.Row="0" Grid.Column="0" Content="Email:"/>
+    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Email, Mode=OneWay}"/>
+
   </Grid>
 </UserControl>

@@ -13,8 +13,10 @@ public sealed class SecurityVault : IDisposable
     private SecureString? _aesPassphrase;
     private SecureString? _whSigningKey;
     private SecureString? _gatewayPassword;
+    private SecureString? _emailPassword;
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
+    public string Email { get; private set; } = string.Empty;
 
     // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -28,12 +30,20 @@ public sealed class SecurityVault : IDisposable
         _gatewayPassword = StringToSecureString(pwd);
     }
 
+    public void SetEmailCredentials(string email, string password)
+    {
+        Email = email;
+        _emailPassword = StringToSecureString(password);
+    }
+
     // Getters return disposable wrapper - forces caller to use using() or Dispose()
     public SecureStringAccessor GetAesPassphrase() => new(_aesPassphrase);
     public SecureStringAccessor GetWhSigningKey() => new(_whSigningKey);
     public SecureStringAccessor GetGatewayPassword() => new(_gatewayPassword);
+    public SecureStringAccessor GetEmailPassword() => new(_emailPassword);
 
     public string GetUsername() => SmsGatewayUsername;
+    public string GetEmail() => Email;
 
     /// <summary>
     /// Clear all sensitive data from memory
@@ -43,7 +53,9 @@ public sealed class SecurityVault : IDisposable
         ClearSecureString(ref _aesPassphrase);
         ClearSecureString(ref _whSigningKey);
         ClearSecureString(ref _gatewayPassword);
+        ClearSecureString(ref _emailPassword);
         SmsGatewayUsername = string.Empty;
+        Email = string.Empty;
     }
 
     public void Dispose()
