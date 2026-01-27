@@ -8,6 +8,9 @@ public class GoogleSecrets
     [JsonPropertyName("client_id")]
     public string ClientId { get; set; } = string.Empty;
 
+    [JsonPropertyName("client_secret")]
+    public string ClientSecret { get; set; } = string.Empty;
+
     [JsonPropertyName("auth_uri")]
     public string AuthUri { get; set; } = string.Empty;
 

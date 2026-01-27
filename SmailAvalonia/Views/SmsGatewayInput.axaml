@@ -35,8 +35,8 @@
     <Label Content="Password:" Grid.Row="3" Grid.Column="0"/>
     <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
 
-    <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
-          Foreground="Red"
-          Content="{Binding ErrorMessage, Mode=TwoWay}"/>
+    <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
+          Foreground="Red" TextWrapping="Wrap"
+          Text="{Binding ErrorMessage, Mode=TwoWay}"/>
   </Grid>
 </UserControl>

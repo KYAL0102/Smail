@@ -9,7 +9,7 @@ namespace Core.Services;
 
 public class EmailService
 {
-    private SmtpServerProfile? _serverProfile = null;
+    private Provider? _emailProvider = null;
 
     public static async Task<(bool Success, string Message)> TestConnectionAsync(string host, int port, string email, string pwd)
     {
@@ -51,9 +51,9 @@ public class EmailService
         var usr = SecurityVault.Instance.Email;
         using var pwd = SecurityVault.Instance.GetEmailPassword();
 
-        _serverProfile ??= SmtpProfiler.GetServerProfileFromEmail(usr);
+        _emailProvider ??= ProviderService.GetServerProviderFromEmail(usr);
 
-        if (_serverProfile == null) throw new ArgumentException("Serverprofile could not be determined.");
+        if (_emailProvider == null) throw new ArgumentException("Email-Provider could not be determined.");
 
         var email = new MimeMessage();
         email.From.Add(MailboxAddress.Parse(usr));
@@ -66,7 +66,7 @@ public class EmailService
         try
         {
             // Use SecureSocketOptions.StartTls for port 587
-            await smtp.ConnectAsync(_serverProfile.Host, _serverProfile.Port, SecureSocketOptions.StartTls);
+            await smtp.ConnectAsync(_emailProvider.SmtpHost, _emailProvider.SmtpPort, SecureSocketOptions.StartTls);
             
             await smtp.AuthenticateAsync(usr, pwd.Value);
             

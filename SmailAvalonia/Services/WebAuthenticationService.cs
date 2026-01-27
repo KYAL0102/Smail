@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform;
@@ -8,50 +10,74 @@ using Core.Models;
 using Core.Models.EmailAuthentication;
 using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient;
+using Duende.IdentityModel.OidcClient.Browser;
+using System.Diagnostics;
 
 namespace SmailAvalonia.Services;
 
 public static class WebAuthenticationService
 {
-    public static async Task GetTokenFromUserWebPermission(string email = "")
-    {
-        // 1. Read and Parse
-        var secrets = LoadSecretsFromJson("avares://SmailAvalonia/Assets/client_google.json");
+    private static TaskCompletionSource<string>? _manualUrlTaskSource;
 
-        // 3. Build the Request URI
+    public static void SetManualUrl(string url) 
+        => _manualUrlTaskSource?.TrySetResult(url);
+
+    public static async Task GetTokenFromUserWebPermissionAsync(Provider provider, string email = "")
+    {
+        var secrets = LoadSecretsFromJson(provider.SecretsPath);
+
         var options = new OidcClientOptions
         {
-            Authority = "https://accounts.google.com",
+            Authority = $"https://{provider.AuthorityUrl}",
             ClientId = secrets.ClientId,
+            ClientSecret = secrets.ClientSecret,
             Scope = "openid profile email",
-            RedirectUri = secrets.RedirectUris[0], // Must match your Google Console exactly
-            Browser = new SystemBrowser(),
-            Policy = new Policy { RequireAccessTokenHash = true }
+            RedirectUri = "http://127.0.0.1:45454",
+            Browser = new SystemBrowser(port: 45454), 
+            Policy = new Policy 
+            { 
+                Discovery = new DiscoveryPolicy
+                {
+                    ValidateEndpoints = false,
+                    ValidateIssuerName = false
+                },
+                RequireAccessTokenHash = true 
+            }
         };
 
         var client = new OidcClient(options);
 
-        var loginRequest = new LoginRequest
-        {
-            FrontChannelExtraParameters = new Parameters
-            {
-                // This tells Google to pre-fill the email field
-                { "login_hint", email } 
-            }
-        };
-        if(email == string.Empty) loginRequest = null;
+        var loginParams = new Parameters { { "prompt", "consent" } };
+        if(!string.IsNullOrEmpty(email)) loginParams.Add("login_hint", email);
+        
+        var state = await client.PrepareLoginAsync(loginParams);
+        _manualUrlTaskSource = new TaskCompletionSource<string>();
 
-        var result = await client.LoginAsync(loginRequest);
+        var browserTask = options.Browser.InvokeAsync(new BrowserOptions(state.StartUrl, options.RedirectUri), CancellationToken.None);
+
+        //Process.Start(new ProcessStartInfo(state.StartUrl) { UseShellExecute = true });
+
+        var manualTask = _manualUrlTaskSource.Task;
+        var completedTask = await Task.WhenAny(browserTask, manualTask);
+
+        string finalUrl;
+        if (completedTask == manualTask) finalUrl = await manualTask;
+        else
+        {
+            var browserResult = await browserTask;
+            if (browserResult.ResultType != BrowserResultType.Success)
+                throw new Exception($"Browser failed: {browserResult.Error}");
+            
+            finalUrl = browserResult.Response;
+        }
+
+        var result = await client.ProcessResponseAsync(finalUrl, state);
 
         if (!result.IsError)
         {
-            // Success! 
-            var user = result.User.Identity?.Name;
-            var token = result.AccessToken;
-
-            Console.WriteLine($"User: {user} \nToken: {token}");
+            Console.WriteLine($"User: {result.User.Identity?.Name} \nToken: {result.AccessToken}");
         }
-        else Console.WriteLine(result.ErrorDescription);
+        else throw new Exception($"{result.Error}");
     }
 
     private static GoogleSecrets? LoadSecretsFromJson(string path)
@@ -68,6 +94,7 @@ public static class WebAuthenticationService
             
             // 3. Read and Deserialize
             string jsonText = reader.ReadToEnd();
+            //Console.WriteLine($"Read following from json: {jsonText}");
             return JsonSerializer.Deserialize<GoogleSecrets>(jsonText);
         }
         catch (Exception ex)

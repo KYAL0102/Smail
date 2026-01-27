@@ -54,6 +54,7 @@ public class AuthenticationViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
+    private Task? loginTask = null;
     private async Task ApplyDataAsync()
     {
         CanApply = false;
@@ -67,9 +68,10 @@ public class AuthenticationViewModel : ViewModelBase
                 {
                     SmsService = smsService
                 };
+
+                await smsInput.AwaitAllTasksAsync();
+                CurrentControl = new EmailInput();
             }
-            await smsInput.AwaitAllTasksAsync();
-            CurrentControl = new EmailInput();
 
             CanApply = true;
 
@@ -77,7 +79,13 @@ public class AuthenticationViewModel : ViewModelBase
         }
         else if(CurrentControl is EmailInput emailInput)
         {
-            //TODO
+            if (loginTask == null)
+            {
+                loginTask = emailInput.ConfirmLoginAsync();
+                CanApply = true;
+                return;
+            }
+            else emailInput.ConfirmManual();
         }
 
         Messenger.Publish(new Message

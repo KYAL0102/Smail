@@ -9,10 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
-  </ItemGroup>
-  <ItemGroup>
-    <AvaloniaResource Include="Assets/Icons/sms.png" />
-    <AvaloniaResource Include="Assets/Icons/email.png" />
+    <AvaloniaResource Include="Secrets/**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.6" />
