@@ -85,7 +85,17 @@ public class AuthenticationViewModel : ViewModelBase
                 CanApply = true;
                 return;
             }
-            else emailInput.ConfirmManual();
+            else
+            {
+                emailInput.ConfirmManual();
+                await loginTask;
+                
+                if(loginTask.IsFaulted)
+                {
+                    CanApply = true;
+                    return;
+                }
+            }
         }
 
         Messenger.Publish(new Message

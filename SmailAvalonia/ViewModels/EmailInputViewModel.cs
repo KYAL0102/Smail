@@ -66,7 +66,15 @@ public class EmailInputViewModel : ViewModelBase
     public void ConfirmManual()
     {
         Console.WriteLine("Setting url manually...");
-        if(!string.IsNullOrEmpty(PastedURL)) WebAuthenticationService.SetManualUrl(PastedURL);
+        try
+        {
+            WebAuthenticationService.SetManualUrl(PastedURL);
+        }
+        catch(Exception e)
+        {
+            ErrorMessage = e.Message;
+            throw;
+        }
     }
 
     public async Task ConfirmLoginAsync()
@@ -88,6 +96,7 @@ public class EmailInputViewModel : ViewModelBase
         catch (Exception e)
         {
             ErrorMessage = e.Message;
+            throw;
         }
     }
 }

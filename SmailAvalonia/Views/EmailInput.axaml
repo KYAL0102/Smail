@@ -26,8 +26,8 @@
     <Label Grid.Row="2" Grid.Column="0" Content="Token URL: " IsVisible="{Binding ManualUrlInputVisible}"/>
     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PastedURL, Mode=TwoWay}" IsVisible="{Binding ManualUrlInputVisible}"/>
 
-    <TextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" 
-          HorizontalAlignment="Right" Foreground="Red"
-          Text="{Binding ErrorMessage}"/>
+    <SelectableTextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" 
+                        HorizontalAlignment="Right" Foreground="Red"
+                        Text="{Binding ErrorMessage}"/>
   </Grid>
 </UserControl>

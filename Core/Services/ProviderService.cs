@@ -25,7 +25,8 @@ public static class ProviderService
         new Provider
         {
             Name = "Microsoft",
-            AuthorityUrl = "account.microsoft.com",
+            SecretsPath = "avares://SmailAvalonia/Secrets/client_microsoft.json",
+            AuthorityUrl = "login.microsoftonline.com/common/v2.0",
             SmtpHost = "smtp.office365.com",
             SmtpPort = 587,
             Security = SecureSocketOptions.StartTls,
@@ -33,7 +34,8 @@ public static class ProviderService
             [
                 "outlook.com",
                 "hotmail.com",
-                "live.com"
+                "live.com",
+                "hilfedieankommt.at" //TODO: Remove this in the future
             ]
         },
         new Provider

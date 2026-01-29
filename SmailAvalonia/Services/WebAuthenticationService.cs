@@ -25,15 +25,17 @@ public static class WebAuthenticationService
     public static async Task GetTokenFromUserWebPermissionAsync(Provider provider, string email = "")
     {
         var secrets = LoadSecretsFromJson(provider.SecretsPath);
+        string? secret = null;
+        if (provider.Name == "Google") secret = secrets.ClientSecret;
 
         var options = new OidcClientOptions
         {
             Authority = $"https://{provider.AuthorityUrl}",
             ClientId = secrets.ClientId,
-            ClientSecret = secrets.ClientSecret,
+            ClientSecret = secret,
             Scope = "openid profile email",
             RedirectUri = "http://127.0.0.1:45454",
-            Browser = new SystemBrowser(port: 45454), 
+            Browser = new SystemBrowser(45454),//new SystemBrowser(port: 45454), 
             Policy = new Policy 
             { 
                 Discovery = new DiscoveryPolicy
@@ -41,7 +43,7 @@ public static class WebAuthenticationService
                     ValidateEndpoints = false,
                     ValidateIssuerName = false
                 },
-                RequireAccessTokenHash = true 
+                //RequireAccessTokenHash = true 
             }
         };
 
@@ -77,7 +79,11 @@ public static class WebAuthenticationService
         {
             Console.WriteLine($"User: {result.User.Identity?.Name} \nToken: {result.AccessToken}");
         }
-        else throw new Exception($"{result.Error}");
+        else
+        {
+            Console.WriteLine(result.Error);
+            throw new Exception($"{result.Error}");
+        }
     }
 
     private static GoogleSecrets? LoadSecretsFromJson(string path)
