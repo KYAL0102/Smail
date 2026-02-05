@@ -19,7 +19,7 @@
     </Grid.ColumnDefinitions>
 
     <Label Grid.Row="0" Grid.Column="0" Content="Email:"/>
-    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Email, Mode=TwoWay}"/>
+    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Email, Mode=TwoWay}" IsEnabled="{Binding IsEmailboxEditable}"/>
 
     <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap" IsVisible="{Binding ManualUrlInputVisible}"
           Text="If the browser page says 'Connection refused', copy the URL. "/>

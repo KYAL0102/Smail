@@ -1,14 +1,17 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Core.Models;
 using Core.Services;
+using Duende.IdentityModel.OidcClient;
 using SmailAvalonia.Services;
 
 namespace SmailAvalonia.ViewModels;
 
 public class EmailInputViewModel : ViewModelBase
 {
+    private CancellationTokenSource? _loginCts;
     private string _email = string.Empty;
     public string Email
     {
@@ -16,6 +19,17 @@ public class EmailInputViewModel : ViewModelBase
         set
         {
             _email = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private bool _isEmailboxEditable = true;
+    public bool IsEmailboxEditable
+    {
+        get => _isEmailboxEditable;
+        set
+        {
+            _isEmailboxEditable = value;
             OnPropertyChanged();
         }
     }
@@ -77,21 +91,35 @@ public class EmailInputViewModel : ViewModelBase
         }
     }
 
-    public async Task ConfirmLoginAsync()
+    public async Task<EmailService> ConfirmLoginAsync()
     {
         var provider = ProviderService.GetServerProviderFromEmail(Email);
 
-        if(provider != null) await LoginViaOAuth(provider);
+        if(provider != null)
+        {
+            var loginResult = await LoginViaOAuth(provider);
+            return new EmailService(loginResult, provider);
+        }
         else throw new ArgumentException("Email-Provider was null.");
     }
 
-    public async Task LoginViaOAuth(Provider provider)
+    public void Reset()
     {
+        IsEmailboxEditable = true;
+        ManualUrlInputVisible = false;
+        _loginCts?.Cancel();
+        _loginCts = null;
+    }
+
+    private async Task<LoginResult> LoginViaOAuth(Provider provider)
+    {
+        IsEmailboxEditable = false;
         ManualUrlInputVisible = true;
 
         try
         {
-            await WebAuthenticationService.GetTokenFromUserWebPermissionAsync(provider, Email);
+            _loginCts = new();
+            return await WebAuthenticationService.GetTokenFromUserWebPermissionAsync(provider, _loginCts.Token, Email);
         }
         catch (Exception e)
         {

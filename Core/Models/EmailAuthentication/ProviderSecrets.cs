@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Core.Models.EmailAuthentication;
 
-public class GoogleSecrets
+public class ProviderSecrets
 {
     [JsonPropertyName("client_id")]
     public string ClientId { get; set; } = string.Empty;

@@ -4,6 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Core.Models;
+using Core.Services;
+using Duende.IdentityModel.OidcClient;
 using SmailAvalonia.ViewModels;
 
 namespace SmailAvalonia;
@@ -25,13 +27,18 @@ public partial class EmailInput : UserControl
         await _viewModel.InitializeDataAsync();
     }
 
-    public async Task ConfirmLoginAsync()
+    public async Task<EmailService> ConfirmLoginAsync()
     {
-        await _viewModel.ConfirmLoginAsync();
+        return await _viewModel.ConfirmLoginAsync();
     }
 
     public void ConfirmManual()
     {
         _viewModel.ConfirmManual();
+    }
+
+    public void Reset()
+    {
+        _viewModel.Reset();
     }
 }

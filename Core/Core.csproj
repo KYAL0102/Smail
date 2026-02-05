@@ -8,6 +8,8 @@
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Duende.IdentityModel.OidcClient" Version="7.0.0" />
-    <PackageReference Include="MailKit" Version="4.14.1" />
+    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.73.0.4029" />
+    <PackageReference Include="Microsoft.Graph" Version="5.101.0" />
+    <PackageReference Include="MimeKit" Version="4.14.0" />
   </ItemGroup>
 </Project>

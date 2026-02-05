@@ -1,81 +1,121 @@
-using System.Net.Sockets;
+using System.IdentityModel.Tokens.Jwt;
 using Core.Models;
-using MailKit.Net.Smtp;
-using MailKit.Security;
+using Core.Models.ApiResponseClasses;
+using Core.Models.EmailAuthentication;
+using DocumentFormat.OpenXml;
+using Duende.IdentityModel.OidcClient;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Gmail.v1;
+using Google.Apis.Services;
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Microsoft.Kiota.Abstractions.Authentication;
 using MimeKit;
-using MimeKit.Text;
 
 namespace Core.Services;
 
 public class EmailService
 {
-    private Provider? _emailProvider = null;
+    private LoginResult _tokens;
+    private Provider _emailProvider;
 
-    public static async Task<(bool Success, string Message)> TestConnectionAsync(string host, int port, string email, string pwd)
+    private string? _email = null;
+
+    public EmailService(LoginResult result, Provider provider)
     {
-        using var client = new SmtpClient();
-        try
-        {
-            // 1. Try to connect to the server
-            // We use a short timeout so the user isn't waiting forever if the host is wrong
-            client.Timeout = 10000; // 10 seconds
-            await client.ConnectAsync(host, port, SecureSocketOptions.Auto);
+        _tokens = result;
+        _emailProvider = provider;
+    }
+    
+    public async Task SendMessageToEmailsAsync(string message, string subject, List<string> emails)
+    {
+        if (_tokens == null) throw new ArgumentException("No tokens.");
 
-            // 2. Try to authenticate
-            await client.AuthenticateAsync(email, pwd);
-
-            // 3. If we reached here, it worked!
-            await client.DisconnectAsync(true);
-            return (true, "Connection successful!");
-        }
-        catch (AuthenticationException)
+        switch(_emailProvider.Name)
         {
-            return (false, "Invalid username or password. (Check if you need an App Password)");
-        }
-        catch (SslHandshakeException)
-        {
-            return (false, "SSL/TLS handshake failed. Check your port and security settings.");
-        }
-        catch (SocketException)
-        {
-            return (false, "Could not connect to the server. Check the Host name and Port.");
-        }
-        catch (Exception ex)
-        {
-            return (false, $"An unexpected error occurred: {ex.Message}");
+            case "Google":
+                await SendGmailToReceivers(_tokens.AccessToken, emails, subject, message);
+                break;
+            case "Microsoft":
+                await SendviaOutlookToRecipients(_tokens.AccessToken, emails, subject, message);
+                break;
         }
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body)
+    private static async Task SendGmailToReceivers(string accessToken, List<string> recipients, string subject, string body)
     {
-        var usr = SecurityVault.Instance.Email;
-        using var pwd = SecurityVault.Instance.GetEmailPassword();
+        var credential = GoogleCredential.FromAccessToken(accessToken);
+        var service = new GmailService(new BaseClientService.Initializer {
+            HttpClientInitializer = credential,
+            ApplicationName = "Smail-Personal"
+        });
 
-        _emailProvider ??= ProviderService.GetServerProviderFromEmail(usr);
+        var mimeMessage = new MimeKit.MimeMessage();
+        mimeMessage.From.Add(new MailboxAddress("Sender", "me@gmail.com")); 
+        mimeMessage.To.Add(new MailboxAddress("Recipient", "me@gmail.com"));
+        mimeMessage.Bcc.AddRange(recipients.Select(item => MailboxAddress.Parse(item)));
+        mimeMessage.Subject = subject;
+        mimeMessage.Body = new TextPart("plain") { Text = body };
 
-        if (_emailProvider == null) throw new ArgumentException("Email-Provider could not be determined.");
+        var msg = new Google.Apis.Gmail.v1.Data.Message {
+            Raw = Base64UrlEncode(mimeMessage)
+        };
 
-        var email = new MimeMessage();
-        email.From.Add(MailboxAddress.Parse(usr));
-        email.To.Add(MailboxAddress.Parse(to));
-        email.Subject = subject;
-        email.Body = new TextPart(TextFormat.Html) { Text = body };
+        Console.WriteLine("Sending email via google...");
+        await service.Users.Messages.Send(msg, "me").ExecuteAsync();
+    }
 
-        // 2. Send the message
-        using var smtp = new SmtpClient();
-        try
+    private static async Task SendviaOutlookToRecipients(string accessToken, List<string> recipients, string subject, string body)
+    {
+        // 1. Create the Auth Provider using our helper above
+        var tokenProvider = new SimpleTokenProvider(accessToken);
+        var authProvider = new BaseBearerTokenAuthenticationProvider(tokenProvider);
+
+        // 2. Initialize the Graph Client
+        var graphClient = new GraphServiceClient(authProvider);
+
+        // 3. Create the request body (Notice the specific v5 Body Class)
+        var requestBody = new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
         {
-            // Use SecureSocketOptions.StartTls for port 587
-            await smtp.ConnectAsync(_emailProvider.SmtpHost, _emailProvider.SmtpPort, SecureSocketOptions.StartTls);
-            
-            await smtp.AuthenticateAsync(usr, pwd.Value);
-            
-            await smtp.SendAsync(email);
-        }
-        finally
+            Message = new Microsoft.Graph.Models.Message
+            {
+                Subject = subject,
+                Body = new ItemBody
+                {
+                    ContentType = BodyType.Text,
+                    Content = body,
+                },
+                ToRecipients = new List<Microsoft.Graph.Models.Recipient>
+                {
+                    new Microsoft.Graph.Models.Recipient { EmailAddress = new EmailAddress { Address = "me" } },
+                },
+                BccRecipients = recipients.Select(email => new Microsoft.Graph.Models.Recipient 
+                {
+                    EmailAddress = new EmailAddress { Address = email }
+                }).ToList()
+            },
+            SaveToSentItems = true
+        };
+
+        // 4. Send the mail (The new v5 syntax)
+        await graphClient.Me.SendMail.PostAsync(requestBody);
+    }
+
+    private static string Base64UrlEncode(MimeMessage mimeMessage)
+    {
+        using (var ms = new MemoryStream())
         {
-            // Disconnect gracefully
-            await smtp.DisconnectAsync(true);
+            // 1. Write the MimeMessage to a stream
+            mimeMessage.WriteTo(ms);
+            
+            // 2. Convert bytes to standard Base64
+            string base64 = Convert.ToBase64String(ms.ToArray());
+            
+            // 3. Convert standard Base64 to Base64Url (Google's format)
+            return base64
+                .Replace('+', '-')
+                .Replace('/', '_')
+                .TrimEnd('=');
         }
     }
 }

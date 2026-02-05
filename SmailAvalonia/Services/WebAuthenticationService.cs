@@ -22,20 +22,21 @@ public static class WebAuthenticationService
     public static void SetManualUrl(string url) 
         => _manualUrlTaskSource?.TrySetResult(url);
 
-    public static async Task GetTokenFromUserWebPermissionAsync(Provider provider, string email = "")
+    public static async Task<LoginResult> GetTokenFromUserWebPermissionAsync(Provider provider, CancellationToken ct, string email = "")
     {
         var secrets = LoadSecretsFromJson(provider.SecretsPath);
         string? secret = null;
         if (provider.Name == "Google") secret = secrets.ClientSecret;
 
+        var port = 45454;
         var options = new OidcClientOptions
         {
             Authority = $"https://{provider.AuthorityUrl}",
             ClientId = secrets.ClientId,
             ClientSecret = secret,
-            Scope = "openid profile email",
-            RedirectUri = "http://127.0.0.1:45454",
-            Browser = new SystemBrowser(45454),//new SystemBrowser(port: 45454), 
+            Scope = provider.Scope,
+            RedirectUri = $"http://localhost:{port}",
+            Browser = new SystemBrowser(port),//new SystemBrowser(port: 45454), 
             Policy = new Policy 
             { 
                 Discovery = new DiscoveryPolicy
@@ -44,49 +45,65 @@ public static class WebAuthenticationService
                     ValidateIssuerName = false
                 },
                 //RequireAccessTokenHash = true 
-            }
+            },
+            LoadProfile = true
         };
 
         var client = new OidcClient(options);
 
         var loginParams = new Parameters { { "prompt", "consent" } };
         if(!string.IsNullOrEmpty(email)) loginParams.Add("login_hint", email);
+        if(provider.Name == "Google") loginParams.Add("access_type", "offline");
         
-        var state = await client.PrepareLoginAsync(loginParams);
+        var state = await client.PrepareLoginAsync(loginParams, ct);
         _manualUrlTaskSource = new TaskCompletionSource<string>();
 
-        var browserTask = options.Browser.InvokeAsync(new BrowserOptions(state.StartUrl, options.RedirectUri), CancellationToken.None);
-
-        //Process.Start(new ProcessStartInfo(state.StartUrl) { UseShellExecute = true });
-
-        var manualTask = _manualUrlTaskSource.Task;
-        var completedTask = await Task.WhenAny(browserTask, manualTask);
-
-        string finalUrl;
-        if (completedTask == manualTask) finalUrl = await manualTask;
-        else
+        using (ct.Register(() => _manualUrlTaskSource.TrySetCanceled()))
         {
-            var browserResult = await browserTask;
-            if (browserResult.ResultType != BrowserResultType.Success)
-                throw new Exception($"Browser failed: {browserResult.Error}");
-            
-            finalUrl = browserResult.Response;
-        }
+            var browserTask = options.Browser.InvokeAsync(new BrowserOptions(state.StartUrl, options.RedirectUri), ct);
+            var manualTask = _manualUrlTaskSource.Task;
 
-        var result = await client.ProcessResponseAsync(finalUrl, state);
+            try 
+            {
+                var completedTask = await Task.WhenAny(browserTask, manualTask);
 
-        if (!result.IsError)
-        {
-            Console.WriteLine($"User: {result.User.Identity?.Name} \nToken: {result.AccessToken}");
-        }
-        else
-        {
-            Console.WriteLine(result.Error);
-            throw new Exception($"{result.Error}");
+                ct.ThrowIfCancellationRequested();
+
+                string finalUrl;
+                if (completedTask == manualTask) 
+                {
+                    finalUrl = await manualTask;
+                }
+                else
+                {
+                    var browserResult = await browserTask;
+                    if (browserResult.ResultType == BrowserResultType.UserCancel)
+                        throw new OperationCanceledException();
+                    
+                    if (browserResult.ResultType != BrowserResultType.Success)
+                        throw new Exception($"Browser failed: {browserResult.Error}");
+                    
+                    finalUrl = browserResult.Response;
+                }
+
+                var result = await client.ProcessResponseAsync(finalUrl, state);
+
+                if (result.IsError)
+                    throw new Exception($"{result.Error}");
+
+                //Console.WriteLine($"User: {result.User.Identity?.Name}");
+                
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Login operation was cancelled.");
+                throw; // Re-throw so your ViewModel knows to reset CanApply
+            }
         }
     }
 
-    private static GoogleSecrets? LoadSecretsFromJson(string path)
+    private static ProviderSecrets? LoadSecretsFromJson(string path)
     {
         // 1. Define the URI.
         // Format: "avares://AssemblyName/Assets/FileName.json"
@@ -101,7 +118,7 @@ public static class WebAuthenticationService
             // 3. Read and Deserialize
             string jsonText = reader.ReadToEnd();
             //Console.WriteLine($"Read following from json: {jsonText}");
-            return JsonSerializer.Deserialize<GoogleSecrets>(jsonText);
+            return JsonSerializer.Deserialize<ProviderSecrets>(jsonText);
         }
         catch (Exception ex)
         {

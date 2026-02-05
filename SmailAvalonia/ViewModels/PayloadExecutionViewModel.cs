@@ -8,6 +8,9 @@ using Core.Models.ApiResponseClasses;
 using Core.Models;
 using SmailAvalonia.Services;
 using Core.Services;
+using Microsoft.Extensions.Localization;
+using System.Collections.Generic;
+using Avalonia.Threading;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -36,21 +39,57 @@ public class PayloadExecutionViewModel: ViewModelBase
             .ToList();
         
         var message = _session.Payload.Message;
+        var emailSubject = "Test-Email"; //TODO: _session.Payload.EmailSession;
 
-        var smsRecipients = await _session.SmsService.SendMessageAsync(message, smsContacts);
-        smsRecipients
-        .Select(r => {
-            Enum.TryParse<SendStatus>(r.State, true, out var status);
-            var contact = _session.Payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
-            return contact is null ? null : new ContactSendStatus {
-                TransmissionType = TransmissionType.SMS,
-                Contact = contact,
-                Status = status
-            };
-        })
-        .Where(x => x != null)!
-        .ToList()
-        .ForEach(ContactStates.Add);
+        var smsTask = SendSms(message, smsContacts);
+        var emailTask = SendEmails(emailSubject, message, emailContacts);
+
+        try
+        {
+            await Task.WhenAll(smsTask, emailTask);
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine($"{e.Message}\n{e.StackTrace}");
+        }
+    }
+
+    private async Task SendSms(string message, List<string> recipients)
+    {
+        if (_session.SmsService != null)
+        {
+            var smsRecipients = await _session.SmsService.SendMessageAsync(message, recipients);
+            
+            var results = smsRecipients
+            .Select(r => {
+                Enum.TryParse<SendStatus>(r.State, true, out var status);
+                var contact = _session.Payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
+                return contact is null ? null : new ContactSendStatus {
+                    TransmissionType = TransmissionType.SMS,
+                    Contact = contact,
+                    Status = status
+                };
+            })
+            .Where(x => x != null)!
+            .ToList();
+
+            Dispatcher.UIThread.Post(() => {
+                foreach (var res in results) {
+                    if(res != null) ContactStates.Add(res);
+                }
+            });
+        }
+        else Console.WriteLine("Could not send SMS (SmsService was null)!");
+    }
+
+    private async Task SendEmails(string subject, string message, List<string> recipients)
+    {
+        if (_session.EmailService != null)
+        {
+            await _session.EmailService.SendMessageToEmailsAsync(message, subject, recipients);
+            Console.WriteLine("Emails sent.");
+        }
+        else Console.WriteLine("Could not send Email (EmailService was null.)");
     }
 
     private void RegisterToWebsocketEvent()

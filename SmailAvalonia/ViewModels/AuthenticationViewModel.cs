@@ -7,6 +7,7 @@ using Core.Models;
 using Core.Services;
 using Avalonia.Controls;
 using SmailAvalonia.Views;
+using Duende.IdentityModel.OidcClient;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -25,7 +26,7 @@ public class AuthenticationViewModel : ViewModelBase
         }
     }
 
-    private Session? _sessionInMaking = null;
+    private Session _sessionInMaking = new();
 
     private bool _canApply = true;
     public bool CanApply 
@@ -40,12 +41,17 @@ public class AuthenticationViewModel : ViewModelBase
     }
 
     public RelayCommand ApplyDataCommand { get; init; }
+    public RelayCommand ResetCommand { get; init; }
     public AuthenticationViewModel(Window? window = null)
     {
         _window = window;
         ApplyDataCommand = new(
             async() => await ApplyDataAsync(),
             () => CanApply
+        );
+        ResetCommand = new
+        (
+            ResetInput
         );
     }
 
@@ -54,50 +60,26 @@ public class AuthenticationViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    private Task? loginTask = null;
+    private Task<EmailService>? loginTask = null;
     private async Task ApplyDataAsync()
     {
         CanApply = false;
         if (CurrentControl is SmsGatewayInput smsInput)
         {
-            SmsService? smsService = await smsInput.CreateSmsServiceAsync();
-
-            if (smsService != null) 
-            {
-                _sessionInMaking = new Session
-                {
-                    SmsService = smsService
-                };
-
-                await smsInput.AwaitAllTasksAsync();
-                CurrentControl = new EmailInput();
-            }
-
-            CanApply = true;
-
+            await ApplySmsGatewayInput(smsInput);
             return;
         }
         else if(CurrentControl is EmailInput emailInput)
         {
-            if (loginTask == null)
-            {
-                loginTask = emailInput.ConfirmLoginAsync();
-                CanApply = true;
-                return;
-            }
-            else
-            {
-                emailInput.ConfirmManual();
-                await loginTask;
-                
-                if(loginTask.IsFaulted)
-                {
-                    CanApply = true;
-                    return;
-                }
-            }
+            var success = await ApplyEmailInput(emailInput);
+            if (!success) return;
         }
 
+        ExitAuthentication();
+    }
+
+    private void ExitAuthentication()
+    {
         Messenger.Publish(new Message
         {
             Action = Globals.NewSessionAction,
@@ -110,5 +92,67 @@ public class AuthenticationViewModel : ViewModelBase
         });
 
         _window?.Close();
+    }
+
+    private void ResetInput()
+    {
+        if (CurrentControl is SmsGatewayInput smsInput)
+        {
+            //TODO
+        }
+        else if(CurrentControl is EmailInput emailInput)
+        {
+            if (loginTask != null)
+            {
+                loginTask = null;
+                emailInput.Reset();
+            }
+        }
+    }
+
+    private async Task ApplySmsGatewayInput(SmsGatewayInput smsInput)
+    {
+        SmsService? smsService = await smsInput.CreateSmsServiceAsync();
+
+            if (smsService != null) 
+            {
+                _sessionInMaking.SmsService = smsService;
+
+                await smsInput.AwaitAllTasksAsync();
+                CurrentControl = new EmailInput();
+            }
+
+            CanApply = true;
+    }
+
+    private async Task<bool> ApplyEmailInput(EmailInput emailInput)
+    {
+        EmailService? serviceInMaking;
+        if (loginTask == null || loginTask.IsCompleted)
+        {
+            CanApply = true;
+            loginTask = emailInput.ConfirmLoginAsync();
+            serviceInMaking = await loginTask;
+        }
+        else
+        {
+            try 
+            {
+                // The user clicked again to confirm manual input
+                emailInput.ConfirmManual(); 
+                serviceInMaking = await loginTask;
+                Console.WriteLine($"task was faulted? {loginTask.IsFaulted}");
+            }
+            catch (Exception)
+            {
+                CanApply = true;
+                loginTask = null;
+                return false;
+            }
+        }
+
+        _sessionInMaking.EmailService = serviceInMaking;
+
+        return true;
     }
 }

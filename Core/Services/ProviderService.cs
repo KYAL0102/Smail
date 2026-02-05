@@ -1,6 +1,5 @@
 using System.Net.Mail;
 using Core.Models;
-using MailKit.Security;
 
 namespace Core.Services;
 
@@ -13,9 +12,7 @@ public static class ProviderService
             Name = "Google",
             SecretsPath = "avares://SmailAvalonia/Secrets/client_google.json",
             AuthorityUrl = "accounts.google.com",
-            SmtpHost = "smtp.gmail.com",
-            SmtpPort = 587,
-            Security = SecureSocketOptions.StartTls,
+            Scope = "openid profile email https://www.googleapis.com/auth/gmail.send",
             EmailDomains = 
             [
                 "gmail.com",
@@ -27,9 +24,7 @@ public static class ProviderService
             Name = "Microsoft",
             SecretsPath = "avares://SmailAvalonia/Secrets/client_microsoft.json",
             AuthorityUrl = "login.microsoftonline.com/common/v2.0",
-            SmtpHost = "smtp.office365.com",
-            SmtpPort = 587,
-            Security = SecureSocketOptions.StartTls,
+            Scope = "openid profile email offline_access Mail.Send",
             EmailDomains = 
             [
                 "outlook.com",
@@ -42,9 +37,6 @@ public static class ProviderService
         {
             Name = "Yahoo",
             AuthorityUrl = "login.yahoo.com",
-            SmtpHost = "smtp.mail.yahoo.com",
-            SmtpPort = 465,
-            Security = SecureSocketOptions.SslOnConnect,
             EmailDomains = 
             [
                 "yahoo.com"
@@ -54,9 +46,6 @@ public static class ProviderService
         {
             Name = "Apple",
             AuthorityUrl = "appleid.apple.com",
-            SmtpHost = "smtp.mail.me.com",
-            SmtpPort = 587,
-            Security = SecureSocketOptions.StartTls,
             EmailDomains = 
             [
                 "icloud.com"
