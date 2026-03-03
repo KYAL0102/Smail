@@ -98,7 +98,7 @@ public class EmailInputViewModel : ViewModelBase
         if(provider != null)
         {
             var loginResult = await LoginViaOAuth(provider);
-            return new EmailService(loginResult, provider);
+            return new EmailService(Email, loginResult, provider);
         }
         else throw new ArgumentException("Email-Provider was null.");
     }

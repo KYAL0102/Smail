@@ -133,9 +133,11 @@ public class RecepientConfigurationViewModel: ViewModelBase
         Contacts.Clear();
         if (CurrentStartIndex < 0 || CurrentStartIndex >= AllContacts.Count)
         {
-            //Console.WriteLine($"Index is out of bounds! ({CurrentStartIndex})");
+            Console.WriteLine($"Index is out of bounds! ({CurrentStartIndex})");
             return;
         }
+
+        if(batchSize == -1) batchSize = PageSize;
 
         AllContacts
             .Skip(CurrentStartIndex)
@@ -174,7 +176,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
         if (contact == null) return;
 
         AllContacts.Remove(contact);
-        SetLastBatchAsCurrent();
+        SetLastBatchAsCurrent(); //TODO: Stay on current batch
     }
 
     public async Task PickFileAsync()

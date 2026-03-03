@@ -18,31 +18,88 @@ public class EmailService
 {
     private LoginResult _tokens;
     private Provider _emailProvider;
+    private string _currentEmail;
 
     private string? _email = null;
 
-    public EmailService(LoginResult result, Provider provider)
+    public EmailService(string email, LoginResult result, Provider provider)
     {
+        _currentEmail = email;
         _tokens = result;
         _emailProvider = provider;
     }
+
+    private static readonly Random _random = new ();
+    private static readonly SemaphoreSlim _semaphore = new (5);
     
-    public async Task SendMessageToEmailsAsync(string message, string subject, List<string> emails)
+    public List<Task<ContactSendStatus>> SendMessageToEmails(string message, string subject, List<Core.Models.Contact> contacts)
     {
         if (_tokens == null) throw new ArgumentException("No tokens.");
 
-        switch(_emailProvider.Name)
+        var fromGoogleEmail = string.IsNullOrEmpty(_currentEmail) ? _currentEmail : "me@gmail.com";
+
+        return contacts.Select(contact => ExecuteSendTask(contact, () => 
         {
-            case "Google":
-                await SendGmailToReceivers(_tokens.AccessToken, emails, subject, message);
-                break;
-            case "Microsoft":
-                await SendviaOutlookToRecipients(_tokens.AccessToken, emails, subject, message);
-                break;
+            return _emailProvider.Name switch
+            {
+                "Google" => SendGmailAsync(_tokens.AccessToken, fromGoogleEmail, contact.Email, subject, message),
+                "Microsoft" => SendOutlookAsync(_tokens.AccessToken, contact.Email, subject, message),
+                _ => throw new NotSupportedException($"Provider {_emailProvider.Name} not supported")
+            };
+        })).ToList();
+    }
+    
+    private static async Task<ContactSendStatus> ExecuteSendTask(Models.Contact contact, Func<Task> sendAction)
+    {
+        await _semaphore.WaitAsync();
+        try
+        {
+            int delay = _random.Next(500, 2000);
+            await Task.Delay(delay);
+
+            await sendAction();
+            return new ContactSendStatus
+            {
+                TransmissionType = TransmissionType.Email,
+                Contact = contact,
+                Status = SendStatus.SENT
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error for {contact.Email} -> {ex.Message}");
+            return new ContactSendStatus
+            {
+                TransmissionType = TransmissionType.Email,
+                Contact = contact,
+                Status = SendStatus.FAILED
+            };
         }
     }
 
-    private static async Task SendGmailToReceivers(string accessToken, List<string> recipients, string subject, string body)
+    private static async Task SendGmailAsync(string accessToken, string email, string to, string subject, string body)
+    {
+        var credential = GoogleCredential.FromAccessToken(accessToken);
+        var service = new GmailService(new BaseClientService.Initializer {
+            HttpClientInitializer = credential,
+            ApplicationName = "Smail-Personal"
+        });
+
+        var mimeMessage = new MimeKit.MimeMessage();
+        mimeMessage.From.Add(new MailboxAddress("Sender", email)); 
+        mimeMessage.To.Add(new MailboxAddress("Recipient", to));
+        mimeMessage.Subject = subject;
+        mimeMessage.Body = new TextPart("plain") { Text = body };
+
+        var msg = new Google.Apis.Gmail.v1.Data.Message {
+            Raw = Base64UrlEncode(mimeMessage)
+        };
+
+        Console.WriteLine("Sending single email via google...");
+        await service.Users.Messages.Send(msg, "me").ExecuteAsync();
+    }
+
+    private static async Task BroadcastGmailOverBccAsync(string accessToken, List<string> recipients, string subject, string body)
     {
         var credential = GoogleCredential.FromAccessToken(accessToken);
         var service = new GmailService(new BaseClientService.Initializer {
@@ -52,8 +109,8 @@ public class EmailService
 
         var mimeMessage = new MimeKit.MimeMessage();
         mimeMessage.From.Add(new MailboxAddress("Sender", "me@gmail.com")); 
-        mimeMessage.To.Add(new MailboxAddress("Recipient", "me@gmail.com"));
-        mimeMessage.Bcc.AddRange(recipients.Select(item => MailboxAddress.Parse(item)));
+        mimeMessage.To.Add(new MailboxAddress("Recipient", recipients.First()));
+        mimeMessage.Bcc.AddRange(recipients.Skip(1).Select(item => MailboxAddress.Parse(item)));
         mimeMessage.Subject = subject;
         mimeMessage.Body = new TextPart("plain") { Text = body };
 
@@ -61,20 +118,17 @@ public class EmailService
             Raw = Base64UrlEncode(mimeMessage)
         };
 
-        Console.WriteLine("Sending email via google...");
+        Console.WriteLine("Sending emails via google...");
         await service.Users.Messages.Send(msg, "me").ExecuteAsync();
     }
 
-    private static async Task SendviaOutlookToRecipients(string accessToken, List<string> recipients, string subject, string body)
+    private static async Task SendOutlookAsync(string accessToken, string to, string subject, string body)
     {
-        // 1. Create the Auth Provider using our helper above
         var tokenProvider = new SimpleTokenProvider(accessToken);
         var authProvider = new BaseBearerTokenAuthenticationProvider(tokenProvider);
 
-        // 2. Initialize the Graph Client
         var graphClient = new GraphServiceClient(authProvider);
 
-        // 3. Create the request body (Notice the specific v5 Body Class)
         var requestBody = new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
         {
             Message = new Microsoft.Graph.Models.Message
@@ -87,9 +141,38 @@ public class EmailService
                 },
                 ToRecipients = new List<Microsoft.Graph.Models.Recipient>
                 {
-                    new Microsoft.Graph.Models.Recipient { EmailAddress = new EmailAddress { Address = "me" } },
+                    new Microsoft.Graph.Models.Recipient { EmailAddress = new EmailAddress { Address = to } },
+                }
+            },
+            SaveToSentItems = true
+        };
+
+        Console.WriteLine("Sending single email via Microsoft...");
+        await graphClient.Me.SendMail.PostAsync(requestBody);
+    }
+
+    private static async Task BroadcastOverOutlookBccAsync(string accessToken, List<string> recipients, string subject, string body)
+    {
+        var tokenProvider = new SimpleTokenProvider(accessToken);
+        var authProvider = new BaseBearerTokenAuthenticationProvider(tokenProvider);
+
+        var graphClient = new GraphServiceClient(authProvider);
+
+        var requestBody = new Microsoft.Graph.Me.SendMail.SendMailPostRequestBody
+        {
+            Message = new Microsoft.Graph.Models.Message
+            {
+                Subject = subject,
+                Body = new ItemBody
+                {
+                    ContentType = BodyType.Text,
+                    Content = body,
                 },
-                BccRecipients = recipients.Select(email => new Microsoft.Graph.Models.Recipient 
+                ToRecipients = new List<Microsoft.Graph.Models.Recipient>
+                {
+                    new Microsoft.Graph.Models.Recipient { EmailAddress = new EmailAddress { Address = recipients.First() } },
+                },
+                BccRecipients = recipients.Skip(1).Select(email => new Microsoft.Graph.Models.Recipient 
                 {
                     EmailAddress = new EmailAddress { Address = email }
                 }).ToList()
@@ -97,7 +180,7 @@ public class EmailService
             SaveToSentItems = true
         };
 
-        // 4. Send the mail (The new v5 syntax)
+        Console.WriteLine("Sending emails via Microsoft...");
         await graphClient.Me.SendMail.PostAsync(requestBody);
     }
 

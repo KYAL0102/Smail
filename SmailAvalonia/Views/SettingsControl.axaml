@@ -11,7 +11,6 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="Auto"/>
@@ -24,12 +23,8 @@
     <!--Encryption Passphrase-->
     <Label Content="Encryption Passphrase:" Grid.Row="1" Grid.Column="0"/>
     <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding EncryptionPassphrase, Mode=TwoWay}"/>
-
-    <!--Webhook Signing Key-->
-    <Label Content="Websocket Signing Key:" Grid.Row="2" Grid.Column="0"/>
-    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding WebhookSigningKey, Mode=TwoWay}"/>
     
-    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
+    <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
       <Button Content="Reset" HorizontalAlignment="Right" 
             Command="{Binding ResetDataCommand}"/>
     

@@ -13,6 +13,7 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="Auto"/>
@@ -35,7 +36,11 @@
     <Label Content="Password:" Grid.Row="3" Grid.Column="0"/>
     <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
 
-    <SelectableTextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
+    <!--Webhook Signing Key-->
+    <Label Content="Websocket Signing Key:" Grid.Row="4" Grid.Column="0"/>
+    <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding WebhookSigningKey, Mode=TwoWay}"/>
+
+    <SelectableTextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" 
                         Foreground="Red" TextWrapping="Wrap"
                         Text="{Binding ErrorMessage, Mode=TwoWay}"/>
   </Grid>

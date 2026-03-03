@@ -28,7 +28,7 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    private string _whSigningKey = string.Empty;
+    /*private string _whSigningKey = string.Empty;
     public string WebhookSigningKey
     {
         get => _whSigningKey;
@@ -37,7 +37,7 @@ public class SettingsViewModel : ViewModelBase
             _whSigningKey = value;
             OnPropertyChanged();
         }
-    }
+    }*/
 
     private bool _canApply = true;
     public bool CanApply 
@@ -85,7 +85,7 @@ public class SettingsViewModel : ViewModelBase
     {
         SmsInput?.ResetData();
         EncryptionPassphrase = SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty;
-        WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
+        //WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     private async Task SaveDataAsync()
@@ -96,8 +96,8 @@ public class SettingsViewModel : ViewModelBase
 
         if(SmsInput != null) tasks.Add(SmsInput.ConfirmParameterChangesAsync());
 
-        tasks.Add(WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey));
-        SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
+        //tasks.Add(WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey));
+        //SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
         SecurityVault.Instance.SetGateWayEncryptionPhrase(EncryptionPassphrase);
 
         await Task.WhenAll(tasks);

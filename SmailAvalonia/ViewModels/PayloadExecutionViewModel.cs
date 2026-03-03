@@ -22,7 +22,8 @@ public class PayloadExecutionViewModel: ViewModelBase
         _session = session;
     }
 
-    public ObservableCollection<ContactSendStatus> ContactStates { get; init; } = [];
+    public ObservableCollection<ContactSendStatus> SmsContactStates { get; init; } = [];
+    public ObservableCollection<ContactSendStatus> EmailContactStates { get; init; } = [];
 
     public async Task InitializeDataAsync()
     {
@@ -30,7 +31,7 @@ public class PayloadExecutionViewModel: ViewModelBase
 
         var emailContacts = _session.Payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
-            .Select(kvp => kvp.Key.Email)
+            .Select(kvp => kvp.Key)
             .ToList();
         
         var smsContacts = _session.Payload.Contacts
@@ -58,7 +59,7 @@ public class PayloadExecutionViewModel: ViewModelBase
     {
         if (_session.SmsService != null)
         {
-            var smsRecipients = await _session.SmsService.SendMessageAsync(message, recipients);
+            var smsRecipients = await _session.SmsService.SendMessageAsync(message, [.. recipients]);
             
             var results = smsRecipients
             .Select(r => {
@@ -75,21 +76,62 @@ public class PayloadExecutionViewModel: ViewModelBase
 
             Dispatcher.UIThread.Post(() => {
                 foreach (var res in results) {
-                    if(res != null) ContactStates.Add(res);
+                    if(res != null) SmsContactStates.Add(res);
                 }
             });
         }
         else Console.WriteLine("Could not send SMS (SmsService was null)!");
     }
 
-    private async Task SendEmails(string subject, string message, List<string> recipients)
+    private async Task SendEmails(string subject, string message, List<Contact> contacts)
     {
         if (_session.EmailService != null)
         {
-            await _session.EmailService.SendMessageToEmailsAsync(message, subject, recipients);
+            var tasks = _session.EmailService.SendMessageToEmails(message, subject, contacts);
+
+            Dispatcher.UIThread.Post(() => {
+                contacts
+                    .Select(contact => new ContactSendStatus
+                    {
+                        TransmissionType = TransmissionType.Email,
+                        Contact = contact,
+                        Status = SendStatus.PENDING
+                    })
+                    .ToList()
+                    .ForEach(EmailContactStates.Add);
+            });
+
+            await MonitorEmailProgress(tasks);
+
             Console.WriteLine("Emails sent.");
         }
         else Console.WriteLine("Could not send Email (EmailService was null.)");
+    }
+
+    public async Task MonitorEmailProgress(List<Task<ContactSendStatus>> tasks)
+    {
+        var remainingTasks = tasks.ToList();
+
+        while (remainingTasks.Count != 0)
+        {
+            Task<ContactSendStatus> completedTask = await Task.WhenAny(remainingTasks);
+
+            remainingTasks.Remove(completedTask);
+
+            try
+            {
+                ContactSendStatus result = await completedTask;
+
+                Dispatcher.UIThread.Post(() => {
+                    var statusInList = EmailContactStates.SingleOrDefault(c => c.Contact == result.Contact);
+                    if(statusInList != null) statusInList.Status = SendStatus.SENT;
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
     }
 
     private void RegisterToWebsocketEvent()
@@ -125,11 +167,16 @@ public class PayloadExecutionViewModel: ViewModelBase
 
         Enum.TryParse<SendStatus>(response.Event.Split(':')[1], true, out var status);
         
-        var encryptor = new AesEncryptor(SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty);
-        var encryptedNumber = response.Payload?.PhoneNumber;
-        var number = encryptor.Decrypt(encryptedNumber);
+        var number = response.Payload?.PhoneNumber;
+
+        var passphrase = SecurityVault.Instance.GetAesPassphrase().Value;
+        if(!string.IsNullOrEmpty(passphrase))
+        {
+            var encryptor = new AesEncryptor(passphrase);
+            number = encryptor.Decrypt(number);
+        }
         
-        var cs = ContactStates
+        var cs = SmsContactStates
             .SingleOrDefault(state => state.Contact.MobileNumber == number);
         
         //Console.WriteLine($"Setting {status} for {cs.Contact.Name}...");

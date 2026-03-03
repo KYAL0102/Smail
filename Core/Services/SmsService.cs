@@ -122,7 +122,7 @@ public class SmsService
                 var response = await _httpClient.DeleteAsync(url);
 
                 if(!response.IsSuccessStatusCode) Console.WriteLine($"{response.StatusCode} - Failed to deregister webhook ({wh.Id})!");
-                //else Console.WriteLine($"Successfully deregistered webhook ({wh.Id})!");
+                else Console.WriteLine($"Successfully deregistered webhook ({wh.Id})!");
             });
             tasks.Add(task);
         }
@@ -174,21 +174,26 @@ public class SmsService
         await Task.WhenAll(tasks);
     }
 
-    public async Task<List<Recipient>> SendMessageAsync(string message, List<string> numbers)
+    public async Task<List<Recipient>> SendMessageAsync(string message, string[] numbers)
     {
         var url = $"http://{DeviceIP}:{Port}/message";
 
         using var aesPassphraseAccessor = SecurityVault.Instance.GetAesPassphrase();
-        var aesPassphrase = aesPassphraseAccessor.Value ?? string.Empty;
+        var aesPassphrase = aesPassphraseAccessor.Value;
 
+        var isEncrypted = !string.IsNullOrEmpty(aesPassphrase);
         var encryptor = new AesEncryptor(aesPassphrase);
-        var encryptedMessage = encryptor.Encrypt(message);
-        var encryptedNumbers = numbers.Select(n => encryptor.Encrypt(n)).ToArray();
+        if(isEncrypted)
+        {
+            message = encryptor.Encrypt(message);
+            numbers = [.. numbers.Select(n => encryptor.Encrypt(n))];
+        }
 
         var payload = new SendMessageSchema
         {
-            TextMessage = new TextMessage{ Text = encryptedMessage },
-            PhoneNumbers = encryptedNumbers
+            TextMessage = new TextMessage{ Text = message },
+            PhoneNumbers = numbers,
+            IsEncrypted = isEncrypted
         };
 
         var json = JsonSerializer.Serialize(payload);
@@ -202,10 +207,13 @@ public class SmsService
         var responseObj = JsonSerializer.Deserialize<SendMessageResponse>(responseString);
 
         var recipients = responseObj!.Recipients;
-        foreach(var r in recipients)
+        if(isEncrypted)
         {
-            var encryptedNumber = r.PhoneNumber;
-            r.PhoneNumber = encryptor.Decrypt(r.PhoneNumber);
+            foreach(var r in recipients)
+            {
+                var encryptedNumber = r.PhoneNumber;
+                r.PhoneNumber = encryptor.Decrypt(r.PhoneNumber);
+            }
         }
 
         return recipients;

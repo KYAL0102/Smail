@@ -18,6 +18,7 @@ public class AesEncryptor
 
     public string Encrypt(string cleartext)
     {
+        var safetext = cleartext.Replace("\r\n", "\n").Replace("\r", "\n");
         byte[] salt = GenerateSalt();
         byte[] key = GenerateKey(salt, _iterations);
 
@@ -26,9 +27,9 @@ public class AesEncryptor
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
         aes.Key = key;
-        aes.IV = salt; // ⚠️ salt is IV (matches Python)
+        aes.IV = salt;
 
-        byte[] plaintextBytes = Encoding.UTF8.GetBytes(cleartext);
+        byte[] plaintextBytes = Encoding.UTF8.GetBytes(safetext);
         byte[] encryptedBytes = aes.CreateEncryptor()
                                    .TransformFinalBlock(plaintextBytes, 0, plaintextBytes.Length);
 

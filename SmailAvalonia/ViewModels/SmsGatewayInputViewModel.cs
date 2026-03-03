@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Core.Models;
 using Core.Services;
+using SmailAvalonia.Services;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -56,6 +57,17 @@ public class SmsGatewayInputViewModel : ViewModelBase
         }
     }
 
+    private string _webhookSigningKey = string.Empty;
+    public string WebhookSigningKey
+    {
+        get => _webhookSigningKey;
+        set
+        {
+            OnPropertyChanged();
+            _webhookSigningKey = value;
+        }
+    }
+
     private string _errorMsg = string.Empty;
     public string ErrorMessage
     {
@@ -70,6 +82,8 @@ public class SmsGatewayInputViewModel : ViewModelBase
     public SmsGatewayInputViewModel(Session? session)
     {
         _session = session;
+
+        WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     public async Task InitializeDataAsync()
@@ -108,6 +122,9 @@ public class SmsGatewayInputViewModel : ViewModelBase
             //Deregister old webhooks
             await _session.SmsService.DeregisterWebhooksAsync();
             await _session.SmsService.UpdateGatewayParameters(SgIP, SgPort, SgUsername, SgPassword);
+            
+            await WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey);
+            SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
         }
         catch(Exception e)
         {
@@ -138,6 +155,9 @@ public class SmsGatewayInputViewModel : ViewModelBase
         }
         
         SecurityVault.Instance.SetGateWayCredentials(SgUsername, SgPassword);
+
+        await WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey);
+        SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
 
         _tasks.Add(Task.Run(smsService.RegisterWebhooks));
 
