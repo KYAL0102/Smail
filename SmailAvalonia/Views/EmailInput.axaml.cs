@@ -8,15 +8,15 @@ using Core.Services;
 using Duende.IdentityModel.OidcClient;
 using SmailAvalonia.ViewModels;
 
-namespace SmailAvalonia;
+namespace SmailAvalonia.Views;
 
 public partial class EmailInput : UserControl
 {
     public EmailInputViewModel _viewModel;
-    public EmailInput()
+    public EmailInput(Session? session = null)
     {
         InitializeComponent();
-        _viewModel = new();
+        _viewModel = new(session);
         DataContext = _viewModel;
         
         Loaded += UserControl_Loaded;
@@ -25,6 +25,11 @@ public partial class EmailInput : UserControl
     private async void UserControl_Loaded(object? sender, RoutedEventArgs e)
     {
         await _viewModel.InitializeDataAsync();
+    }
+
+    public void ChangeEmailTextBoxMode(bool isEditable)
+    {
+        _viewModel.IsEmailboxEditable = isEditable;
     }
 
     public async Task<EmailService> ConfirmLoginAsync()

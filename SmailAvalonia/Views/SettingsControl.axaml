@@ -6,30 +6,44 @@
              x:Class="SmailAvalonia.Views.SettingsControl"
              xmlns:vm="using:SmailAvalonia.ViewModels"
              x:DataType="vm:SettingsViewModel">
-  <Grid>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="Auto"/>
-      <ColumnDefinition Width="*"/>
-    </Grid.ColumnDefinitions>
+  <TabControl>
+    <TabItem Header="SMS-Gateway">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-    <!--Sms Gateway Credentials-->
-    <ContentControl Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="{Binding SmsInput}"/>
+        <!--Sms Gateway Credentials-->
+        <ContentControl Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="{Binding SmsInput}"/>
 
-    <!--Encryption Passphrase-->
-    <Label Content="Encryption Passphrase:" Grid.Row="1" Grid.Column="0"/>
-    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding EncryptionPassphrase, Mode=TwoWay}"/>
-    
-    <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
-      <Button Content="Reset" HorizontalAlignment="Right" 
-            Command="{Binding ResetDataCommand}"/>
-    
-      <Button Content="Apply" HorizontalAlignment="Right" 
-              Command="{Binding SaveDataCommand}"/>
-    </StackPanel>
-  </Grid>
+        <!--Encryption Passphrase-->
+        <Label Content="Encryption Passphrase:" Grid.Row="1" Grid.Column="0"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding EncryptionPassphrase, Mode=TwoWay}"/>
+        
+        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
+          <Button Content="Reset" HorizontalAlignment="Right" 
+                Command="{Binding ResetDataCommand}"/>
+        
+          <Button Content="Apply" HorizontalAlignment="Right" 
+                  Command="{Binding SaveDataCommand}"/>
+        </StackPanel>
+      </Grid>
+    </TabItem>
+    <TabItem Header="Email">
+      <StackPanel Orientation="Vertical">
+        <ContentControl Content="{Binding EmailInput}"/>
+        <StackPanel Orientation="Horizontal">
+          <Button Content="Edit" Command="{Binding EditEmailCommand}"/>
+          <Button Content="Cancel" Command="{Binding CancelEmailEditingCommand}"/>
+          <Button Content="Apply" Command="{Binding ApplyEmailCommand}"/>
+        </StackPanel>
+      </StackPanel>
+    </TabItem>
+  </TabControl>
 </UserControl>

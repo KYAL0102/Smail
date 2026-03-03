@@ -18,13 +18,11 @@ public class EmailService
 {
     private LoginResult _tokens;
     private Provider _emailProvider;
-    private string _currentEmail;
-
-    private string? _email = null;
+    public string Email { get; init; }
 
     public EmailService(string email, LoginResult result, Provider provider)
     {
-        _currentEmail = email;
+        Email = email;
         _tokens = result;
         _emailProvider = provider;
     }
@@ -36,7 +34,7 @@ public class EmailService
     {
         if (_tokens == null) throw new ArgumentException("No tokens.");
 
-        var fromGoogleEmail = string.IsNullOrEmpty(_currentEmail) ? _currentEmail : "me@gmail.com";
+        var fromGoogleEmail = string.IsNullOrEmpty(Email) ? Email : "me@gmail.com";
 
         return contacts.Select(contact => ExecuteSendTask(contact, () => 
         {

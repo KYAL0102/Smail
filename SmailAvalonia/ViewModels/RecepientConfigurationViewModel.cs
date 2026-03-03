@@ -168,7 +168,15 @@ public class RecepientConfigurationViewModel: ViewModelBase
         };
 
         AllContacts.Add(newContact);
+        ResetSingleContactInputFields();
         SetLastBatchAsCurrent();
+    }
+
+    private void ResetSingleContactInputFields()
+    {
+        NewContactName = string.Empty;
+        NewContactEmail = string.Empty;
+        NewContactMobileNumber = string.Empty;
     }
 
     private void RemoveContact(Contact? contact)

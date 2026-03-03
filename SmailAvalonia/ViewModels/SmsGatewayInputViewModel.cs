@@ -83,6 +83,7 @@ public class SmsGatewayInputViewModel : ViewModelBase
     {
         _session = session;
 
+        ResetData();
         WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 

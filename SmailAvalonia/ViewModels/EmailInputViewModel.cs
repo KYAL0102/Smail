@@ -11,6 +11,7 @@ namespace SmailAvalonia.ViewModels;
 
 public class EmailInputViewModel : ViewModelBase
 {
+    private Session? _session;
     private CancellationTokenSource? _loginCts;
     private string _email = string.Empty;
     public string Email
@@ -67,9 +68,10 @@ public class EmailInputViewModel : ViewModelBase
         }
     }
 
-    public EmailInputViewModel() 
+    public EmailInputViewModel(Session? session = null) 
     {
-        
+        _session = session;
+        Reset();
     }
 
     public async Task InitializeDataAsync()
@@ -105,7 +107,13 @@ public class EmailInputViewModel : ViewModelBase
 
     public void Reset()
     {
-        IsEmailboxEditable = true;
+        if(_session != null && _session.EmailService != null)
+        {
+            Email = _session.EmailService.Email;
+            IsEmailboxEditable = false;
+        }
+        else IsEmailboxEditable = true;
+
         ManualUrlInputVisible = false;
         _loginCts?.Cancel();
         _loginCts = null;
