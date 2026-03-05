@@ -2,10 +2,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
-using Core.Models;
 using Core.Services;
-using Duende.IdentityModel.OidcClient;
+using Core.Models;
 using SmailAvalonia.ViewModels;
 
 namespace SmailAvalonia.Views;

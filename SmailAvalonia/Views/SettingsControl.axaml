@@ -9,6 +9,9 @@
   <TabControl>
     <TabItem Header="SMS-Gateway">
       <Grid>
+        <Grid.KeyBindings>
+          <KeyBinding Command="{Binding SaveDataCommand}" Gesture="Enter"/>
+        </Grid.KeyBindings>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
@@ -37,6 +40,9 @@
     </TabItem>
     <TabItem Header="Email">
       <StackPanel Orientation="Vertical">
+        <StackPanel.KeyBindings>
+          <KeyBinding Command="{Binding ApplyEmailCommand}" Gesture="Enter"/>
+        </StackPanel.KeyBindings>
         <ContentControl Content="{Binding EmailInput}"/>
         <StackPanel Orientation="Horizontal">
           <Button Content="Edit" Command="{Binding EditEmailCommand}"/>

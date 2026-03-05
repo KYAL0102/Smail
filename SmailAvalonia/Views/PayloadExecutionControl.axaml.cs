@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Core.Models;
+using Core.Services;
 using SmailAvalonia.ViewModels;
 
 namespace SmailAvalonia.Views;
@@ -11,10 +12,10 @@ namespace SmailAvalonia.Views;
 public partial class PayloadExecutionControl : UserControl
 {
     private PayloadExecutionViewModel _viewModel;
-    public PayloadExecutionControl(Session session)
+    public PayloadExecutionControl(MessagePayload payload, SmsService? smsService, EmailService? emailService)
     {
         InitializeComponent();
-        _viewModel = new(session);
+        _viewModel = new(payload, smsService, emailService);
         DataContext = _viewModel;
         Loaded += UserControl_Loaded;
     }

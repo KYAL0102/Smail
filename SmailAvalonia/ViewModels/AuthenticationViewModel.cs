@@ -1,13 +1,11 @@
 using System;
 using System.Threading.Tasks;
-using System.Net.Http;
 using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
 using Core.Services;
 using Avalonia.Controls;
 using SmailAvalonia.Views;
-using Duende.IdentityModel.OidcClient;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -42,6 +40,7 @@ public class AuthenticationViewModel : ViewModelBase
 
     public RelayCommand ApplyDataCommand { get; init; }
     public RelayCommand ResetCommand { get; init; }
+    public RelayCommand SkipCommand { get; init; }
     public AuthenticationViewModel(Window? window = null)
     {
         _window = window;
@@ -52,6 +51,10 @@ public class AuthenticationViewModel : ViewModelBase
         ResetCommand = new
         (
             ResetInput
+        );
+        SkipCommand = new
+        (
+            Skip
         );
     }
 
@@ -110,19 +113,25 @@ public class AuthenticationViewModel : ViewModelBase
         }
     }
 
+    private void Skip()
+    {
+        if(CurrentControl is SmsGatewayInput) CurrentControl = new EmailInput();
+        else if(CurrentControl is EmailInput) ExitAuthentication();
+    }
+
     private async Task ApplySmsGatewayInput(SmsGatewayInput smsInput)
     {
         SmsService? smsService = await smsInput.CreateSmsServiceAsync();
 
-            if (smsService != null) 
-            {
-                _sessionInMaking.SmsService = smsService;
+        if (smsService != null) 
+        {
+            _sessionInMaking.SmsService = smsService;
 
-                await smsInput.AwaitAllTasksAsync();
-                CurrentControl = new EmailInput();
-            }
+            await smsInput.AwaitAllTasksAsync();
+            CurrentControl = new EmailInput();
+        }
 
-            CanApply = true;
+        CanApply = true;
     }
 
     private async Task<bool> ApplyEmailInput(EmailInput emailInput)

@@ -8,12 +8,16 @@ using SmailAvalonia.Views;
 using SmailAvalonia.Services;
 using CommunityToolkit.Mvvm.Input;
 using Avalonia.Threading;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SmailAvalonia.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly Window _window;
+
+    public Dictionary<string, PayloadExecutionControl> ExecutionHistory { get; } = [];
 
     private Session? _currentSession = null;
     public Session? CurrentSession 
@@ -38,6 +42,8 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public RelayCommand GoToSettingsCommand { get; set; }
+    public RelayCommand GoToHomeCommand { get; set; }
+    public RelayCommand GoToRuntimeCommand { get; set; }
 
     public MainWindowViewModel(Window window)
     {
@@ -48,13 +54,15 @@ public partial class MainWindowViewModel : ViewModelBase
         Messenger.Subscribe(Globals.NavigateToMessageConfigurationAction, _ => NavigateToPayloadConfiguration());
         Messenger.Subscribe(Globals.NavigateToRecepientConfigurationAction, _ => NavigateToRecepientsConfiguration());
         Messenger.Subscribe(Globals.NavigateToPayloadSummaryAction, _ => NavigateToPayloadSummary());
-        Messenger.Subscribe(Globals.NavigateToExecutionAction, _ => NavigateToExecution());
+        Messenger.Subscribe(Globals.NavigateToExecutionAction, async _ => await NavigateToExecution());
 
         GoToSettingsCommand = new
         (
             async () => await OpenSettingsAsync(),
             () => true
         );
+        GoToHomeCommand = new(NavigateToRecepientsConfiguration);
+        GoToRuntimeCommand = new(OpenRuntimeSummary);
     }
 
     public async Task InitializeDataAsync()
@@ -98,6 +106,13 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void OpenRuntimeSummary()
+    {
+        var control = ExecutionHistory.Values.LastOrDefault();
+
+        CurrentPage = control;
+    }
+
     private async Task OpenSettingsAsync()
     {
         if(_window == null || CurrentSession == null) return;
@@ -120,11 +135,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void NavigateToPayloadConfiguration()
     {
-        /*if (_window != null && _oldWindowState != null)
-        {
-            _window.CanResize = true;
-            _window.WindowState = (WindowState)_oldWindowState;
-        }*/
         if (CurrentSession != null ) CurrentPage = new MessageConfigurationControl(CurrentSession);
     }
     
@@ -133,8 +143,25 @@ public partial class MainWindowViewModel : ViewModelBase
         if (CurrentSession != null ) CurrentPage = new PayloadSummaryControl(CurrentSession);
     }
 
-    private void NavigateToExecution()
+    private async Task NavigateToExecution()
     {
-        if (CurrentSession != null ) CurrentPage = new PayloadExecutionControl(CurrentSession);
+        if (CurrentSession != null ) 
+        {
+            var executionControl = new PayloadExecutionControl(
+                CurrentSession.Payload.Clone(), 
+                CurrentSession.SmsService, 
+                CurrentSession.EmailService
+            );
+
+            ExecutionHistory.Add($"Payload - {DateTime.Now.ToString("HH:mm")}", executionControl);
+
+            CurrentPage = executionControl;
+
+            await Task.Delay(100);
+            Dispatcher.UIThread.Post(() => 
+            {
+                CurrentSession.Payload = new();
+            }, DispatcherPriority.Background);
+        }
     }
 }

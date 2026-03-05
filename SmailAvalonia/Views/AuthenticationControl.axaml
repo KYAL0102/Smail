@@ -7,6 +7,9 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SmailAvalonia.Views.AuthenticationControl"
              x:DataType="vm:AuthenticationViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Command="{Binding ApplyDataCommand}" Gesture="Enter"/>
+  </UserControl.KeyBindings>
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -20,6 +23,8 @@
               Command="{Binding ResetCommand}"/>
       <Button Content="Confirm" HorizontalAlignment="Right" 
               Command="{Binding ApplyDataCommand}"/>
+      <Button Content="Skip" HorizontalAlignment="Right"
+              Command="{Binding SkipCommand}"/>
     </StackPanel>
   </Grid>
 </UserControl>

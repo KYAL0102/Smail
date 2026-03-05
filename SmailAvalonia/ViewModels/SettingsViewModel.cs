@@ -7,6 +7,8 @@ using SmailAvalonia.Services;
 using Avalonia.Controls;
 using SmailAvalonia.Views;
 using System.Collections.Generic;
+using DocumentFormat.OpenXml;
+using Avalonia.Threading;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -67,6 +69,19 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    private bool _newEmailIsProcessing = false;
+    public bool IsEmailProcessing
+    {
+        get => _newEmailIsProcessing;
+        set
+        {
+            _newEmailIsProcessing = value;
+            OnPropertyChanged();
+            ApplyEmailCommand.NotifyCanExecuteChanged();
+            CancelEmailEditingCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     public RelayCommand ResetDataCommand { get; set; }
     public RelayCommand SaveDataCommand { get; set; }
 
@@ -85,7 +100,7 @@ public class SettingsViewModel : ViewModelBase
         ResetDataCommand = new(ResetData);
         SaveDataCommand = new
         (
-            async () => await SaveDataAsync(),
+            async () => await ApplySmsChangesAsync(),
             () => CanApply_SmsSettings
         );
         EditEmailCommand = new
@@ -96,12 +111,12 @@ public class SettingsViewModel : ViewModelBase
         CancelEmailEditingCommand = new
         (
             ResetUI,
-            () => EditingEmail
+            () => EditingEmail && !IsEmailProcessing
         );
         ApplyEmailCommand = new
         (
             async () => await ApplyEmailAsync(),
-            () => EditingEmail
+            () => EditingEmail && !IsEmailProcessing
         );
     }
 
@@ -119,12 +134,14 @@ public class SettingsViewModel : ViewModelBase
     private void ResetUI()
     {
         EditingEmail = false;
+        IsEmailProcessing = false;
         EmailInput?.Reset();
         //EmailInput?.ChangeEmailTextBoxMode(false); //Not necessary, because the Contentcontrol covers the setback
     }
 
     private async Task ApplyEmailAsync()
     {
+        IsEmailProcessing = true;
         var success = await ApplyEmailInput(EmailInput);
         if (!success) return;
 
@@ -137,6 +154,7 @@ public class SettingsViewModel : ViewModelBase
         EmailService? serviceInMaking;
         if (loginTask == null || loginTask.IsCompleted)
         {
+            IsEmailProcessing = false;
             loginTask = emailInput.ConfirmLoginAsync();
             serviceInMaking = await loginTask;
         }
@@ -151,6 +169,7 @@ public class SettingsViewModel : ViewModelBase
             }
             catch (Exception)
             {
+                IsEmailProcessing = false;
                 loginTask = null;
                 return false;
             }
@@ -173,16 +192,26 @@ public class SettingsViewModel : ViewModelBase
         //WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
-    private async Task SaveDataAsync()
+    private async Task ApplySmsChangesAsync()
     {
         CanApply_SmsSettings = false;
 
         var tasks = new List<Task>();
 
-        if(SmsInput != null) tasks.Add(SmsInput.ConfirmParameterChangesAsync());
+        if(SmsInput != null && _session.SmsService != null) tasks.Add(SmsInput.ConfirmParameterChangesAsync());
+        else if (SmsInput != null)
+        {
+            var smsService = await SmsInput.CreateSmsServiceAsync();
 
-        //tasks.Add(WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey));
-        //SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
+            await Task.Delay(100);
+            Dispatcher.UIThread.Post(() => 
+            {
+                _session.SmsService = smsService;
+            });
+
+            await SmsInput.AwaitAllTasksAsync();
+        }
+
         SecurityVault.Instance.SetGateWayEncryptionPhrase(EncryptionPassphrase);
 
         await Task.WhenAll(tasks);

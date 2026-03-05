@@ -16,30 +16,45 @@ namespace SmailAvalonia.ViewModels;
 
 public class PayloadExecutionViewModel: ViewModelBase
 {
-    private Session _session { get; init; }
-    public PayloadExecutionViewModel(Session session)
+    private MessagePayload _payload { get; init; }
+    private SmsService? _smsService { get; init; }
+    private EmailService? _emailService { get; init; }
+    public PayloadExecutionViewModel(MessagePayload payload, SmsService? smsService, EmailService? emailService)
     {
-        _session = session;
+        _payload = payload;
+        _smsService = smsService;
+        _emailService = emailService;
     }
 
     public ObservableCollection<ContactSendStatus> SmsContactStates { get; init; } = [];
     public ObservableCollection<ContactSendStatus> EmailContactStates { get; init; } = [];
 
+    private bool inProgress = false;
+
     public async Task InitializeDataAsync()
+    {
+        if(!inProgress)
+        {
+            inProgress = true;
+            await ExecuteMessages();
+        }
+    }
+
+    public async Task ExecuteMessages()
     {
         RegisterToWebsocketEvent();
 
-        var emailContacts = _session.Payload.Contacts
+        var emailContacts = _payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
             .Select(kvp => kvp.Key)
             .ToList();
         
-        var smsContacts = _session.Payload.Contacts
+        var smsContacts = _payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.SMS)
             .Select(kvp => kvp.Key.MobileNumber)
             .ToList();
         
-        var message = _session.Payload.Message;
+        var message = _payload.Message;
         var emailSubject = "Test-Email"; //TODO: _session.Payload.EmailSession;
 
         var smsTask = SendSms(message, smsContacts);
@@ -57,14 +72,14 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     private async Task SendSms(string message, List<string> recipients)
     {
-        if (_session.SmsService != null)
+        if (_smsService != null)
         {
-            var smsRecipients = await _session.SmsService.SendMessageAsync(message, [.. recipients]);
-            
+            var smsRecipients = await _smsService.SendMessageAsync(message, [.. recipients]);
+
             var results = smsRecipients
             .Select(r => {
                 Enum.TryParse<SendStatus>(r.State, true, out var status);
-                var contact = _session.Payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
+                var contact = _payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
                 return contact is null ? null : new ContactSendStatus {
                     TransmissionType = TransmissionType.SMS,
                     Contact = contact,
@@ -85,9 +100,9 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     private async Task SendEmails(string subject, string message, List<Contact> contacts)
     {
-        if (_session.EmailService != null)
+        if (_emailService != null)
         {
-            var tasks = _session.EmailService.SendMessageToEmails(message, subject, contacts);
+            var tasks = _emailService.SendMessageToEmails(message, subject, contacts);
 
             Dispatcher.UIThread.Post(() => {
                 contacts

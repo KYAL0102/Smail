@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.Input;
 using Core.Models;
 using Core.Services;
 using SmailAvalonia.Services;
@@ -108,10 +107,11 @@ public class SmsGatewayInputViewModel : ViewModelBase
     {
         if(_session == null) return;
 
-        SgIP = _session.SmsService.DeviceIP;
-        SgPort = $"{_session.SmsService.Port}";
+        ErrorMessage = string.Empty;
         SgUsername = SecurityVault.Instance.GetUsername();
         SgPassword = SecurityVault.Instance.GetGatewayPassword().Value ?? string.Empty;
+        SgIP = _session.SmsService?.DeviceIP ?? string.Empty;
+        SgPort = _session.SmsService?.Port.ToString() ?? string.Empty;
     }
 
     public async Task ConfirmParameterChangeAsync()

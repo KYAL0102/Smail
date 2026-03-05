@@ -107,9 +107,10 @@ public class EmailInputViewModel : ViewModelBase
 
     public void Reset()
     {
-        if(_session != null && _session.EmailService != null)
+        if(_session != null)
         {
-            Email = _session.EmailService.Email;
+            if(_session.EmailService == null) Email = string.Empty;
+            else Email = _session.EmailService.Email;
             IsEmailboxEditable = false;
         }
         else IsEmailboxEditable = true;
