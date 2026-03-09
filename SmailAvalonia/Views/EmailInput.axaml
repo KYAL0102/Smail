@@ -24,7 +24,8 @@
     <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap" IsVisible="{Binding ManualUrlInputVisible}"
           Text="If the browser page says 'Connection refused', copy the URL. "/>
     <Label Grid.Row="2" Grid.Column="0" Content="Token URL: " IsVisible="{Binding ManualUrlInputVisible}"/>
-    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PastedURL, Mode=TwoWay}" IsVisible="{Binding ManualUrlInputVisible}"/>
+    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding PastedURL, Mode=TwoWay}" 
+            IsVisible="{Binding ManualUrlInputVisible}" IsEnabled="{Binding IsManualUrlInputEditable}"/>
 
     <SelectableTextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" 
                         HorizontalAlignment="Right" Foreground="Red"

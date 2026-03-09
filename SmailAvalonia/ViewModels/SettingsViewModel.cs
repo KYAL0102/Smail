@@ -70,7 +70,7 @@ public class SettingsViewModel : ViewModelBase
     }
 
     private bool _newEmailIsProcessing = false;
-    public bool IsEmailProcessing
+    public bool IsManualProcessing
     {
         get => _newEmailIsProcessing;
         set
@@ -110,13 +110,13 @@ public class SettingsViewModel : ViewModelBase
         );
         CancelEmailEditingCommand = new
         (
-            ResetUI,
-            () => EditingEmail && !IsEmailProcessing
+            ResetEmailInput,
+            () => EditingEmail && !IsManualProcessing
         );
         ApplyEmailCommand = new
         (
             async () => await ApplyEmailAsync(),
-            () => EditingEmail && !IsEmailProcessing
+            () => EditingEmail && !IsManualProcessing
         );
     }
 
@@ -131,53 +131,61 @@ public class SettingsViewModel : ViewModelBase
         EmailInput?.ChangeEmailTextBoxMode(true);
     }
 
-    private void ResetUI()
+    private void ResetEmailInput()
     {
         EditingEmail = false;
-        IsEmailProcessing = false;
+        IsManualProcessing = false;
+        loginTask = null;
         EmailInput?.Reset();
         //EmailInput?.ChangeEmailTextBoxMode(false); //Not necessary, because the Contentcontrol covers the setback
     }
 
     private async Task ApplyEmailAsync()
     {
-        IsEmailProcessing = true;
-        var success = await ApplyEmailInput(EmailInput);
-        if (!success) return;
-
-        ResetUI();
+        try 
+        {
+            var success = await ApplyEmailInput(EmailInput);
+            if (success)
+            {
+                ResetEmailInput();
+            }
+        }
+        finally 
+        {
+            // Centralized state cleanup
+            EditingEmail = false;
+            IsManualProcessing = false;
+        }
     }
 
     private Task<EmailService>? loginTask = null;
     private async Task<bool> ApplyEmailInput(EmailInput emailInput)
     {
-        EmailService? serviceInMaking;
-        if (loginTask == null || loginTask.IsCompleted)
+        try 
         {
-            IsEmailProcessing = false;
-            loginTask = emailInput.ConfirmLoginAsync();
-            serviceInMaking = await loginTask;
-        }
-        else
-        {
-            try 
+            if (loginTask == null || loginTask.IsCompleted)
             {
-                // The user clicked again to confirm manual input
+                loginTask = emailInput.ConfirmLoginAsync();
+            }
+            else
+            {
+                IsManualProcessing = true;
                 emailInput.ConfirmManual(); 
-                serviceInMaking = await loginTask;
-                Console.WriteLine($"task was faulted? {loginTask.IsFaulted}");
             }
-            catch (Exception)
-            {
-                IsEmailProcessing = false;
-                loginTask = null;
-                return false;
-            }
+
+            _session.EmailService = await loginTask;
+            return true;
         }
-
-        _session.EmailService = serviceInMaking;
-
-        return true;
+        catch (Exception)
+        {
+            IsManualProcessing = false;
+            return false;
+        }
+        finally 
+        {
+            // Ensures the next attempt starts fresh
+            loginTask = null; 
+        }
     }
 
     public async Task OnUnloadAsync()

@@ -111,7 +111,7 @@ public class SmsGatewayInputViewModel : ViewModelBase
         SgUsername = SecurityVault.Instance.GetUsername();
         SgPassword = SecurityVault.Instance.GetGatewayPassword().Value ?? string.Empty;
         SgIP = _session.SmsService?.DeviceIP ?? string.Empty;
-        SgPort = _session.SmsService?.Port.ToString() ?? string.Empty;
+        SgPort = _session.SmsService?.Port.ToString() ?? "8080";
     }
 
     public async Task ConfirmParameterChangeAsync()

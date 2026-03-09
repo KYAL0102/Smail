@@ -99,17 +99,15 @@ public class AuthenticationViewModel : ViewModelBase
 
     private void ResetInput()
     {
+        CanApply = true;
         if (CurrentControl is SmsGatewayInput smsInput)
         {
             //TODO
         }
         else if(CurrentControl is EmailInput emailInput)
         {
-            if (loginTask != null)
-            {
-                loginTask = null;
-                emailInput.Reset();
-            }
+            loginTask = null;
+            //emailInput.Reset(); -> EmailInput already resets when an exception occurs
         }
     }
 
@@ -137,27 +135,26 @@ public class AuthenticationViewModel : ViewModelBase
     private async Task<bool> ApplyEmailInput(EmailInput emailInput)
     {
         EmailService? serviceInMaking;
-        if (loginTask == null || loginTask.IsCompleted)
+        try 
         {
-            CanApply = true;
-            loginTask = emailInput.ConfirmLoginAsync();
-            serviceInMaking = await loginTask;
-        }
-        else
-        {
-            try 
+            if (loginTask == null || loginTask.IsCompleted)
+            {
+                CanApply = true;
+                loginTask = emailInput.ConfirmLoginAsync();
+                serviceInMaking = await loginTask;
+            }
+            else
             {
                 // The user clicked again to confirm manual input
                 emailInput.ConfirmManual(); 
                 serviceInMaking = await loginTask;
                 Console.WriteLine($"task was faulted? {loginTask.IsFaulted}");
             }
-            catch (Exception)
-            {
-                CanApply = true;
-                loginTask = null;
-                return false;
-            }
+        }
+        catch (Exception)
+        {
+            ResetInput();
+            return false;
         }
 
         _sessionInMaking.EmailService = serviceInMaking;

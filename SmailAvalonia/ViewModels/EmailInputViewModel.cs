@@ -46,6 +46,17 @@ public class EmailInputViewModel : ViewModelBase
         }
     }
 
+    private bool _isManualUrlInputEditable = true;
+    public bool IsManualUrlInputEditable
+    {
+        get => _isManualUrlInputEditable;
+        set
+        {
+            _isManualUrlInputEditable = value;
+            OnPropertyChanged();
+        }
+    }
+
     private string _pastedURL = string.Empty;
     public string PastedURL
     {
@@ -81,13 +92,14 @@ public class EmailInputViewModel : ViewModelBase
 
     public void ConfirmManual()
     {
-        Console.WriteLine("Setting url manually...");
+        IsManualUrlInputEditable = false;
         try
         {
             WebAuthenticationService.SetManualUrl(PastedURL);
         }
         catch(Exception e)
         {
+            IsManualUrlInputEditable = true;
             ErrorMessage = e.Message;
             throw;
         }
@@ -95,6 +107,7 @@ public class EmailInputViewModel : ViewModelBase
 
     public async Task<EmailService> ConfirmLoginAsync()
     {
+        ErrorMessage = string.Empty;
         var provider = ProviderService.GetServerProviderFromEmail(Email);
 
         if(provider != null)
@@ -116,6 +129,8 @@ public class EmailInputViewModel : ViewModelBase
         else IsEmailboxEditable = true;
 
         ManualUrlInputVisible = false;
+        PastedURL = string.Empty;
+        
         _loginCts?.Cancel();
         _loginCts = null;
     }
@@ -124,15 +139,20 @@ public class EmailInputViewModel : ViewModelBase
     {
         IsEmailboxEditable = false;
         ManualUrlInputVisible = true;
+        IsManualUrlInputEditable = true;
 
         try
         {
             _loginCts = new();
             return await WebAuthenticationService.GetTokenFromUserWebPermissionAsync(provider, _loginCts.Token, Email);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            ErrorMessage = e.Message;
+            ErrorMessage = ex.Message;
+            IsManualUrlInputEditable = true;
+            Reset();
+
+            Console.WriteLine($"Login failed: {ex.Message}");
             throw;
         }
     }
