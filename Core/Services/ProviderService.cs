@@ -1,10 +1,12 @@
 using System.Net.Mail;
+using DnsClient;
 using Core.Models;
 
 namespace Core.Services;
 
 public static class ProviderService
 {
+    private static readonly LookupClient _dnsClient = new LookupClient();
     private readonly static List<Provider> _providers = new()
     {
         new Provider
@@ -30,9 +32,9 @@ public static class ProviderService
                 "outlook.com",
                 "hotmail.com",
                 "live.com",
-                "hilfedieankommt.at" //TODO: Remove this in the future
+                //"hilfedieankommt.at"
             ]
-        },
+        }/*,
         new Provider
         {
             Name = "Yahoo",
@@ -50,13 +52,38 @@ public static class ProviderService
             [
                 "icloud.com"
             ]
-        }
+        }*/
     };
 
-    public static Provider? GetServerProviderFromEmail(string email)
+    public static async Task<Provider?> GetServerProviderFromEmailAsync(string email)
     {
-        var emailAddress = new MailAddress(email);
+        var domain = new MailAddress(email).Host;
 
-        return _providers.SingleOrDefault(p => p.EmailDomains.Contains(emailAddress.Host));
+        // 1. Check hardcoded common domains first (Efficiency)
+        var fastMatch = _providers.FirstOrDefault(p => p.EmailDomains.Contains(domain));
+        if (fastMatch != null) return fastMatch;
+
+        // 2. Perform DNS MX Lookup
+        var result = await _dnsClient.QueryAsync(domain, QueryType.MX);
+        var mxRecords = result.Answers.MxRecords();
+
+        foreach (var record in mxRecords)
+        {
+            string exchange = record.Exchange.Value.ToLower();
+
+            if (exchange.Contains("outlook.com"))
+                return _providers.First(p => p.Name == "Microsoft");
+
+            if (exchange.Contains("google.com") || exchange.Contains("googlemail.com"))
+                return _providers.First(p => p.Name == "Google");
+            
+            /*if (exchange.Contains("yahoodns.net"))
+                return _providers.First(p => p.Name == "Yahoo");
+            
+            if (exchange.Contains("icloud.com"))
+                return _providers.First(p => p.Name == "Apple");*/
+        }
+
+        return null;
     }
 }

@@ -108,7 +108,7 @@ public class EmailInputViewModel : ViewModelBase
     public async Task<EmailService> ConfirmLoginAsync()
     {
         ErrorMessage = string.Empty;
-        var provider = ProviderService.GetServerProviderFromEmail(Email);
+        var provider = await ProviderService.GetServerProviderFromEmailAsync(Email);
 
         if(provider != null)
         {
