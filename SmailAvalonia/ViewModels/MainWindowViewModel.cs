@@ -16,6 +16,7 @@ namespace SmailAvalonia.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly Window _window;
+    private readonly Task? _serverTask = null;
 
     public Dictionary<string, PayloadExecutionControl> ExecutionHistory { get; } = [];
 
@@ -45,16 +46,17 @@ public partial class MainWindowViewModel : ViewModelBase
     public RelayCommand GoToHomeCommand { get; set; }
     public RelayCommand GoToRuntimeCommand { get; set; }
 
-    public MainWindowViewModel(Window window)
+    public MainWindowViewModel(Window window, Task? serverTask = null)
     {
         _window = window;
+        _serverTask = serverTask;
         //CurrentPage = new AuthenticationControl();
         
         Messenger.Subscribe(Globals.NewSessionAction, message => AssignNewSession(message.Data));
         Messenger.Subscribe(Globals.NavigateToMessageConfigurationAction, _ => NavigateToPayloadConfiguration());
         Messenger.Subscribe(Globals.NavigateToRecepientConfigurationAction, _ => NavigateToRecepientsConfiguration());
         Messenger.Subscribe(Globals.NavigateToPayloadSummaryAction, _ => NavigateToPayloadSummary());
-        Messenger.Subscribe(Globals.NavigateToExecutionAction, async _ => await NavigateToExecution());
+        Messenger.Subscribe(Globals.NavigateToExecutionAction, async msg => await NavigateToExecution(msg.Data));
 
         GoToSettingsCommand = new
         (
@@ -67,6 +69,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task InitializeDataAsync()
     {
+        if(_serverTask != null) 
+            await _serverTask;
         await WsClientService.Instance.ConnectToServerWsHub();
 
         //TODO: This is a temporary solution. Implement input and permanent storage for signing key/aes passphrase
@@ -106,13 +110,6 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void OpenRuntimeSummary()
-    {
-        var control = ExecutionHistory.Values.LastOrDefault();
-
-        CurrentPage = control;
-    }
-
     private async Task OpenSettingsAsync()
     {
         if(_window == null || CurrentSession == null) return;
@@ -126,6 +123,11 @@ public partial class MainWindowViewModel : ViewModelBase
         vm.Content = control;
 
         await vm.ShowDialog(_window);
+    }
+
+    private void OpenRuntimeSummary()
+    {
+        CurrentPage = new PayloadHistoryControl(ExecutionHistory);
     }
 
     private void NavigateToRecepientsConfiguration()
@@ -143,9 +145,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (CurrentSession != null ) CurrentPage = new PayloadSummaryControl(CurrentSession);
     }
 
-    private async Task NavigateToExecution()
+    private async Task NavigateToExecution(object? obj = null)
     {
-        if (CurrentSession != null ) 
+        if(obj is PayloadExecutionControl control) CurrentPage = control;
+        else if (CurrentSession != null ) 
         {
             var executionControl = new PayloadExecutionControl(
                 CurrentSession.Payload.Clone(), 

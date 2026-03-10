@@ -51,5 +51,8 @@
         </StackPanel>
       </StackPanel>
     </TabItem>
+    <TabItem Header="Updates">
+      <Label Content="Nothing here yet!"/>
+    </TabItem>
   </TabControl>
 </UserControl>

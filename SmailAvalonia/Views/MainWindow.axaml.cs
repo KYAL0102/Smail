@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using SmailAvalonia.ViewModels;
@@ -7,10 +8,10 @@ namespace SmailAvalonia.Views;
 public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel;
-    public MainWindow()
+    public MainWindow(Task? serverTask = null)
     {
         InitializeComponent();
-        _viewModel = new MainWindowViewModel(this);
+        _viewModel = new MainWindowViewModel(this, serverTask);
         DataContext = _viewModel;
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;

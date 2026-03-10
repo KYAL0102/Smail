@@ -25,6 +25,12 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.3" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\SmailAPI\CALibs\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\SmailAPI\SmailAPI.csproj" />
   </ItemGroup>
 </Project>
