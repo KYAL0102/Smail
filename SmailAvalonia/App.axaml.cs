@@ -32,7 +32,22 @@ public partial class App : Application
                 Dispatcher.UIThread.Post(() => desktop.Shutdown());
             };
 
-            Task.Run(() => ApiServer.RunAsync(System.Array.Empty<string>(), _cts.Token), _cts.Token);
+            var apiPath = typeof(ApiServer).Assembly.Location;
+            Console.WriteLine($"API Assembly found at: {apiPath}");
+
+            Task.Run(async () => 
+            {
+                try 
+                {
+                    await ApiServer.RunAsync(System.Array.Empty<string>(), _cts.Token);
+                }
+                catch (Exception ex) 
+                {
+                    // On Linux, this will print to the terminal if you run ./Smail.AppImage
+                    Console.WriteLine($"API CRASH: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                }
+            }, _cts.Token);
 
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
