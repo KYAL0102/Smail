@@ -85,7 +85,8 @@ jobs:
                    --tag ${{ github.ref_name }} \
                    --publish \
                    --merge \
-                   -o ./all_packages/release-win-x64
+                   --channel win \
+                   --outputDir ./all_packages/release-win-x64
 
           # Upload Linux assets
           vpk upload github \
@@ -94,4 +95,5 @@ jobs:
                    --tag ${{ github.ref_name }} \
                    --publish \
                    --merge \
-                   -o ./all_packages/release-linux-x64
+                   --channel linux \
+                   --outputDir ./all_packages/release-linux-x64
