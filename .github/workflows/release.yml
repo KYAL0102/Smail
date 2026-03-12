@@ -5,28 +5,25 @@ name: Release
 on:
   push:
     tags:
-      - 'v*' 
+      - 'v*'
 
 jobs:
-  build-and-deploy:
+  build-and-pack:
     strategy:
       matrix:
         include:
           - os: windows-latest
             rid: win-x64
-            executable: SmailAvalonia.exe  
+            executable: SmailAvalonia.exe
           - os: ubuntu-latest
             rid: linux-x64
-            executable: SmailAvalonia    
+            executable: SmailAvalonia
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -46,20 +43,44 @@ jobs:
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk
 
-      - name: Velopack Operations
+      - name: Velopack Pack
+        shell: bash
+        run: |
+          vpk pack -u ${{ env.APP_NAME }} \
+                   -v ${GITHUB_REF_NAME#v} \
+                   -p ./publish_output \
+                   -e ${{ matrix.executable }} \
+                   -o ./velopack_release
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.rid }}
+          path: ./velopack_release/*
+
+  upload-to-github:
+    needs: build-and-pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./merged_releases
+          merge-multiple: true
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Velopack Upload
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN"
-
-          vpk pack -u ${{ env.APP_NAME }} \
-                   -v ${GITHUB_REF_NAME#v} \
-                   -p ./publish_output \
-                   -e ${{ matrix.executable }}
-
           vpk upload github \
                    --repoUrl "https://github.com/${{ github.repository }}" \
                    --token "$GH_TOKEN" \
                    --tag ${{ github.ref_name }} \
-                   --publish
+                   --publish \
+                   -p ./merged_releases
