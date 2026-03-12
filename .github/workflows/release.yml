@@ -83,4 +83,5 @@ jobs:
                    --token "$GH_TOKEN" \
                    --tag ${{ github.ref_name }} \
                    --publish \
-                   --source ./merged_releases
+                   --merge \
+                   --outputDir ./merged_releases
