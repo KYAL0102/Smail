@@ -54,7 +54,7 @@ jobs:
           vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN"
 
           vpk pack -u ${{ env.APP_NAME }} \
-                   -v ${{ github.ref_name }} \
+                   -v ${GITHUB_REF_NAME#v} \
                    -p ./publish_output \
                    -e ${{ matrix.executable }}
 
