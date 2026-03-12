@@ -34,6 +34,7 @@ jobs:
           dotnet-version: 10.0
 
       - name: Dotnet Publish
+        shell: bash
         run: |
           dotnet publish ./SmailAvalonia/SmailAvalonia.csproj \
             -c Release \
