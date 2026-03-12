@@ -51,7 +51,7 @@ public static class NetworkManager
             ? @"CALibs/Windows_86x_64/smsgate-ca.exe"
             : @"CALibs/Linux_86x_64/smsgate-ca";
 
-        string fullPath = Path.Combine(baseDir, relativePath);
+        string fullPath = Path.GetFullPath(Path.Combine(baseDir, relativePath));
 
         if (!File.Exists(fullPath))
             throw new FileNotFoundException($"Could not find smsgate-ca binary at: {fullPath}");
@@ -63,8 +63,13 @@ public static class NetworkManager
     {
         string networkId = GetNetworkId();
 
+        string rootDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Smail"
+        );
+
         string folder = Path.Combine(
-            AppContext.BaseDirectory,
+            rootDataFolder,
             "Certificates",
             networkId
         );
