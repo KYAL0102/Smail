@@ -67,8 +67,8 @@ jobs:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ./merged_releases
-          merge-multiple: true
+          path: ./all_packages
+          # merge-multiple: false (This is the default, keeps folders separate)
 
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk
@@ -84,4 +84,4 @@ jobs:
                    --tag ${{ github.ref_name }} \
                    --publish \
                    --merge \
-                   --outputDir ./merged_releases
+                   -o ./all_packages
