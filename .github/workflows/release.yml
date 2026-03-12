@@ -1,0 +1,64 @@
+env:
+  APP_NAME: Smail
+
+name: Release
+on:
+  push:
+    tags:
+      - 'v*' 
+
+jobs:
+  build-and-deploy:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            executable: SmailAvalonia.exe  
+          - os: ubuntu-latest
+            rid: linux-x64
+            executable: SmailAvalonia    
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0
+
+      - name: Dotnet Publish
+        run: |
+          dotnet publish ./SmailAvalonia/SmailAvalonia.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishReadyToRun=true \
+            -o ./publish_output
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Velopack Operations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN"
+
+          vpk pack -u ${{ env.APP_NAME }} \
+                   -v ${{ github.ref_name }} \
+                   -p ./publish_output \
+                   -e ${{ matrix.executable }}
+
+          vpk upload github \
+                   --repoUrl "https://github.com/${{ github.repository }}" \
+                   --token "$GH_TOKEN" \
+                   --tag ${{ github.ref_name }} \
+                   --publish
