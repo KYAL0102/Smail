@@ -52,7 +52,27 @@
       </StackPanel>
     </TabItem>
     <TabItem Header="Updates">
-      <Label Content="Nothing here yet!"/>
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
+          <Label Content="Current Version: "/>
+          <Label Content="{Binding CurrentVersion}"/>
+        </StackPanel>
+
+        <Button Grid.Row="1" Grid.Column="0" 
+                Content="{Binding UpdateBtnContent}"
+                Command="{Binding UpdateCommand}"/>
+        <Label Grid.Row="1" Grid.Column="1"
+                Content="{Binding UpdateInfoText}"/>
+      </Grid>
     </TabItem>
   </TabControl>
 </UserControl>

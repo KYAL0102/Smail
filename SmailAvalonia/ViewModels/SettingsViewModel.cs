@@ -9,6 +9,8 @@ using SmailAvalonia.Views;
 using System.Collections.Generic;
 using DocumentFormat.OpenXml;
 using Avalonia.Threading;
+using Microsoft.Graph.Models;
+using Velopack;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -82,12 +84,60 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
+    private bool _updateBtnLocked = false;
+    public bool UpdateBtnLocked
+    {
+        get => _updateBtnLocked;
+        set
+        {
+            _updateBtnLocked = value;
+            OnPropertyChanged();
+            UpdateCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private string _currentVersion = string.Empty;
+    public string CurrentVersion
+    {
+        get => _currentVersion;
+        set
+        {
+            _currentVersion = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _updateBtnContent = "Check for Update";
+    public string UpdateBtnContent
+    {
+        get => _updateBtnContent;
+        set
+        {
+            _updateBtnContent = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _updateInfoText = string.Empty;
+    public string UpdateInfoText
+    {
+        get => _updateInfoText;
+        set
+        {
+            _updateInfoText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private UpdateInfo? _updateInfo = null;
+
     public RelayCommand ResetDataCommand { get; set; }
     public RelayCommand SaveDataCommand { get; set; }
 
     public RelayCommand EditEmailCommand { get; set; }
     public RelayCommand CancelEmailEditingCommand { get; set; }
     public RelayCommand ApplyEmailCommand { get; set; }
+    public RelayCommand UpdateCommand { get; set; }
 
     public SettingsViewModel(Session session, Window? window)
     {
@@ -96,6 +146,8 @@ public class SettingsViewModel : ViewModelBase
 
         SmsInput = new(_session);
         EmailInput = new(_session);
+
+        CurrentVersion = UpdateChecker.GetCurrentVersion();
 
         ResetDataCommand = new(ResetData);
         SaveDataCommand = new
@@ -118,11 +170,47 @@ public class SettingsViewModel : ViewModelBase
             async () => await ApplyEmailAsync(),
             () => EditingEmail && !IsManualProcessing
         );
+        UpdateCommand = new
+        (
+            async() => await CheckForUpdatesAsync(),
+            () => !UpdateBtnLocked
+        );
     }
 
     public async Task InitializeDataAsync()
     {
         await Task.CompletedTask;
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        UpdateBtnLocked = true;
+        try
+        {
+            if(_updateInfo == null)
+            {
+                var result = await UpdateChecker.CheckForUpdatesManualAsync();
+
+                if(result == null || result.IsDowngrade) UpdateInfoText = "You currently have the newest version!";
+                else
+                {
+                    UpdateInfoText = $"There is a new version ({result.TargetFullRelease.Version})!";
+                    UpdateBtnContent = "Install upgrade";
+
+                    _updateInfo = result;
+                }
+            }
+            else
+            {
+                await UpdateChecker.UpdateAsync(_updateInfo);
+            }
+        }
+        catch(Exception ex)
+        {
+            UpdateInfoText = ex.Message;
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+        }
+        UpdateBtnLocked = false;
     }
 
     private void EnableEmailEditing()

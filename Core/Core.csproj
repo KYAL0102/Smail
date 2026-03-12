@@ -13,4 +13,8 @@
     <PackageReference Include="Microsoft.Graph" Version="5.103.0" />
     <PackageReference Include="MimeKit" Version="4.15.1" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="appsettings.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
 </Project>
