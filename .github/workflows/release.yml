@@ -78,10 +78,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Upload Windows assets
           vpk upload github \
                    --repoUrl "https://github.com/${{ github.repository }}" \
                    --token "$GH_TOKEN" \
                    --tag ${{ github.ref_name }} \
                    --publish \
                    --merge \
-                   -o ./all_packages
+                   -o ./all_packages/release-win-x64
+
+          # Upload Linux assets
+          vpk upload github \
+                   --repoUrl "https://github.com/${{ github.repository }}" \
+                   --token "$GH_TOKEN" \
+                   --tag ${{ github.ref_name }} \
+                   --publish \
+                   --merge \
+                   -o ./all_packages/release-linux-x64
