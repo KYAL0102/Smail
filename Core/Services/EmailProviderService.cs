@@ -1,18 +1,18 @@
 using System.Net.Mail;
 using DnsClient;
 using Core.Models;
+using Microsoft.Extensions.Options;
 
 namespace Core.Services;
 
-public static class ProviderService
+public class EmailProviderService
 {
-    private static readonly LookupClient _dnsClient = new LookupClient();
-    private readonly static List<Provider> _providers = new()
+    private readonly LookupClient _dnsClient = new LookupClient();
+    private readonly List<Provider> _providers = new()
     {
         new Provider
         {
             Name = "Google",
-            SecretsPath = "avares://SmailAvalonia/Secrets/client_google.json",
             AuthorityUrl = "accounts.google.com",
             Scope = "openid profile email https://www.googleapis.com/auth/gmail.send",
             EmailDomains = 
@@ -24,7 +24,6 @@ public static class ProviderService
         new Provider
         {
             Name = "Microsoft",
-            SecretsPath = "avares://SmailAvalonia/Secrets/client_microsoft.json",
             AuthorityUrl = "login.microsoftonline.com/common/v2.0",
             Scope = "openid profile email offline_access Mail.Send",
             EmailDomains = 
@@ -55,7 +54,22 @@ public static class ProviderService
         }*/
     };
 
-    public static async Task<Provider?> GetServerProviderFromEmailAsync(string email)
+    public EmailProviderService(IOptions<AuthSettings> options)
+    {
+        var settings = options.Value;
+        var googleProvider = _providers.SingleOrDefault(p => p.Name == "Google");
+        var microsoftProvider = _providers.SingleOrDefault(p => p.Name == "Microsoft");
+
+        if(googleProvider == null || microsoftProvider == null)
+        {
+            Console.WriteLine($"Google or Microsoft item in the service list was null.");
+            return;
+        }
+        googleProvider.Identification = settings.Google with { Name = "Google" };
+        microsoftProvider.Identification = settings.Microsoft with { Name = "Microsoft"};
+    }
+
+    public async Task<Provider?> GetServerProviderFromEmailAsync(string email)
     {
         var domain = new MailAddress(email).Host;
 

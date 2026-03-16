@@ -11,11 +11,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using System;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Core.Services;
+using Core.Models;
+using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 namespace SmailAvalonia;
 
 public partial class App : Application
 {
+    public static IServiceProvider ServiceProvider { get; private set; }
     public CancellationTokenSource _cts = new();
     public override void Initialize()
     {
@@ -24,16 +31,21 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IConfiguration>(Program.Configuration);
+        services.Configure<AuthSettings>(Program.Configuration);
+        services.AddSingleton<EmailProviderService>();
+
+        ServiceProvider = services.BuildServiceProvider();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             Console.CancelKeyPress += (s, e) => 
             {
-                e.Cancel = true; // Prevent the OS from killing the process instantly
+                e.Cancel = true; 
                 Dispatcher.UIThread.Post(() => desktop.Shutdown());
             };
-
-            var apiPath = typeof(ApiServer).Assembly.Location;
-            Console.WriteLine($"API Assembly found at: {apiPath}");
 
             Task.Run(async () => 
             {

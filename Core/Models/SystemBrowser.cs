@@ -9,26 +9,23 @@ namespace Core.Models;
 
 public class SystemBrowser : IBrowser
 {
-    private int _port = -1;
+    private readonly TcpListener _listener;
+    public int Port { get; set; }
     public SystemBrowser(int port)
     {
-        _port = port;
+        _listener = new TcpListener(IPAddress.Loopback, port);
+        _listener.Start();
+        Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
     }
 
     public async Task<BrowserResult> InvokeAsync(BrowserOptions options, CancellationToken cancellationToken = default)
     {
-        var listener = new TcpListener(IPAddress.IPv6Any, _port);
-        listener.Server.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, false);
-        listener.Start();
-
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;;
-
         try 
         {
             OpenBrowser(options.StartUrl);
 
             // 2. Accept the browser's connection
-            using TcpClient client = await listener.AcceptTcpClientAsync(cancellationToken);
+            using TcpClient client = await _listener.AcceptTcpClientAsync(cancellationToken);
             using NetworkStream stream = client.GetStream();
 
             // 3. Read the request to get the code/token
@@ -51,13 +48,13 @@ public class SystemBrowser : IBrowser
 
             return new BrowserResult
             {
-                Response = $"http://localhost:{port}{parts[1]}",
+                Response = $"http://localhost:{Port}{parts[1]}",
                 ResultType = BrowserResultType.Success
             };
         }
         finally
         {
-            listener.Stop();
+            _listener.Stop();
         }
     }
 

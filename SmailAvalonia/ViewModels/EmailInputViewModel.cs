@@ -6,11 +6,13 @@ using Core.Models;
 using Core.Services;
 using Duende.IdentityModel.OidcClient;
 using SmailAvalonia.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SmailAvalonia.ViewModels;
 
 public class EmailInputViewModel : ViewModelBase
 {
+    private readonly EmailProviderService _providerService;
     private Session? _session;
     private CancellationTokenSource? _loginCts;
     private string _email = string.Empty;
@@ -81,6 +83,7 @@ public class EmailInputViewModel : ViewModelBase
 
     public EmailInputViewModel(Session? session = null) 
     {
+        _providerService = App.ServiceProvider.GetRequiredService<EmailProviderService>();;
         _session = session;
         Reset();
     }
@@ -108,7 +111,7 @@ public class EmailInputViewModel : ViewModelBase
     public async Task<EmailService> ConfirmLoginAsync()
     {
         ErrorMessage = string.Empty;
-        var provider = await ProviderService.GetServerProviderFromEmailAsync(Email);
+        var provider = await _providerService.GetServerProviderFromEmailAsync(Email);
 
         if(provider != null)
         {
@@ -152,7 +155,7 @@ public class EmailInputViewModel : ViewModelBase
             IsManualUrlInputEditable = true;
             Reset();
 
-            Console.WriteLine($"Login failed: {ex.Message}");
+            Console.WriteLine($"Login failed: {ex.Message} - {ex.StackTrace}");
             throw;
         }
     }

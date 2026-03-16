@@ -24,19 +24,20 @@ public static class WebAuthenticationService
 
     public static async Task<LoginResult> GetTokenFromUserWebPermissionAsync(Provider provider, CancellationToken ct, string email = "")
     {
-        var secrets = LoadSecretsFromJson(provider.SecretsPath);
         string? secret = null;
-        if (provider.Name == "Google") secret = secrets.ClientSecret;
+        if (provider.Name == "Google") secret = provider.Identification?.ClientSecret;
 
-        var port = 45454;
+        var browser = new SystemBrowser(0); 
+        var port = browser.Port;
+
         var options = new OidcClientOptions
         {
             Authority = $"https://{provider.AuthorityUrl}",
-            ClientId = secrets.ClientId,
+            ClientId = provider.Identification?.ClientId,
             ClientSecret = secret,
             Scope = provider.Scope,
             RedirectUri = $"http://localhost:{port}",
-            Browser = new SystemBrowser(port),//new SystemBrowser(port: 45454), 
+            Browser = browser,//new SystemBrowser(port: 45454), 
             Policy = new Policy 
             { 
                 Discovery = new DiscoveryPolicy

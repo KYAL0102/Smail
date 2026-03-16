@@ -34,7 +34,7 @@ public class EmailService
     {
         if (_tokens == null) throw new ArgumentException("No tokens.");
 
-        var fromGoogleEmail = string.IsNullOrEmpty(Email) ? Email : "me@gmail.com";
+        var fromGoogleEmail = !string.IsNullOrEmpty(Email) ? Email : "me@gmail.com";
 
         return contacts.Select(contact => ExecuteSendTask(contact, () => 
         {
