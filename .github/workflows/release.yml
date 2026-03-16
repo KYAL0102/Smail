@@ -29,6 +29,22 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0
+      
+      - name: Create appsettings.json from Secrets
+        shell: bash
+        run: |
+          cat <<EOF > ./SmailAvalonia/appsettings.json
+          {
+            "Google": {
+              "ClientId": "${{ secrets.G_ID }}",
+              "ClientSecret": "${{ secrets.G_SECRET }}"
+            },
+            "Microsoft": {
+              "ClientId": "${{ secrets.M_ID }}",
+              "ClientSecret": "${{ secrets.M_SECRET }}"
+            }
+          }
+          EOF
 
       - name: Dotnet Publish
         shell: bash
