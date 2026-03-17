@@ -128,6 +128,26 @@ public class SettingsViewModel : ViewModelBase
             OnPropertyChanged();
         }
     }
+    private int _updateProgress = 0;
+    public int UpdateProgress
+    {
+        get => _updateProgress;
+        set
+        {
+            _updateProgress = value;
+            OnPropertyChanged();
+        }
+    }
+    private bool _updateIsDownloading = false;
+    public bool UpdateIsDownloading
+    {
+        get => _updateIsDownloading;
+        set
+        {
+            _updateIsDownloading = value;
+            OnPropertyChanged();
+        }
+    }
 
     private UpdateInfo? _updateInfo = null;
 
@@ -202,7 +222,14 @@ public class SettingsViewModel : ViewModelBase
             }
             else
             {
-                await UpdateChecker.UpdateAsync(_updateInfo);
+                UpdateProgress = 0;
+                UpdateIsDownloading = true;
+                var progressReporter = new Progress<int>(value =>
+                {
+                    UpdateProgress = value;
+                });
+
+                await UpdateChecker.UpdateAsync(_updateInfo, progressReporter);
             }
         }
         catch(Exception ex)

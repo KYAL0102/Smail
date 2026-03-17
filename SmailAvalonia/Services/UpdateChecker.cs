@@ -23,9 +23,9 @@ public static class UpdateChecker
         return await UpdateManager.CheckForUpdatesAsync();
     }
 
-    public static async Task UpdateAsync(UpdateInfo info)
+    public static async Task UpdateAsync(UpdateInfo info, IProgress<int> progress)
     {
-        await UpdateManager.DownloadUpdatesAsync(info);
+        await UpdateManager.DownloadUpdatesAsync(info, p => progress.Report(p));
 
         UpdateManager.ApplyUpdatesAndRestart(info);
     }

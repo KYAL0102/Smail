@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using Velopack;
+using Velopack.Locators;
 
 namespace SmailAvalonia;
 
@@ -14,7 +15,16 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        VelopackApp.Build().Run();
+        var builder = VelopackApp.Build();
+#if DEBUG
+        var locator = new TestVelopackLocator(
+            appId: "Smail",
+            version: "0.1.0",
+            packagesDir: "@/home/yak/Documents/TanzaniaDocumentation/CodeProjects/Smail/SmailAvalonia/Releases"
+        );
+        builder.SetLocator(locator);
+#endif
+        builder.Run();
 
         Configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", optional: true)

@@ -56,6 +56,7 @@
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto"/>
@@ -72,6 +73,13 @@
                 Command="{Binding UpdateCommand}"/>
         <Label Grid.Row="1" Grid.Column="1"
                 Content="{Binding UpdateInfoText}"/>
+
+        <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+          IsVisible="{Binding UpdateIsDownloading}"
+          Minimum="0" 
+          Maximum="100" 
+          Value="{Binding UpdateProgress}" 
+          ShowProgressText="True"/>
       </Grid>
     </TabItem>
   </TabControl>
