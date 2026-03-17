@@ -7,7 +7,7 @@ namespace Core.Services;
 
 public class EmailProviderService
 {
-    private readonly LookupClient _dnsClient = new LookupClient();
+    private readonly IDnsQuery _dnsClient;
     private readonly List<Provider> _providers = new()
     {
         new Provider
@@ -54,8 +54,10 @@ public class EmailProviderService
         }*/
     };
 
-    public EmailProviderService(IOptions<AuthSettings> options)
+    public EmailProviderService(IOptions<AuthSettings> options, IDnsQuery? dnsClient = null)
     {
+        _dnsClient = dnsClient ?? new LookupClient();
+
         var settings = options.Value;
         var googleProvider = _providers.SingleOrDefault(p => p.Name == "Google");
         var microsoftProvider = _providers.SingleOrDefault(p => p.Name == "Microsoft");

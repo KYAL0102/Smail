@@ -165,6 +165,7 @@ public class SettingsViewModel : ViewModelBase
         _window = window;
 
         SmsInput = new(_session);
+        EncryptionPassphrase = SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty;
         EmailInput = new(_session);
 
         CurrentVersion = UpdateChecker.GetCurrentVersion();
@@ -312,7 +313,6 @@ public class SettingsViewModel : ViewModelBase
     {
         SmsInput?.ResetData();
         EncryptionPassphrase = SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty;
-        //WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     private async Task ApplySmsChangesAsync()

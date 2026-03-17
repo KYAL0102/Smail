@@ -51,7 +51,7 @@ public partial class App : Application
             {
                 try 
                 {
-                    await ApiServer.RunAsync(System.Array.Empty<string>(), _cts.Token);
+                    await ApiServer.RunAsync([ Program.Configuration["SmsHttpCertificateKey"] ], _cts.Token);
                 }
                 catch (Exception ex) 
                 {

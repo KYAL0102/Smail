@@ -83,7 +83,6 @@ public class SmsGatewayInputViewModel : ViewModelBase
         _session = session;
 
         ResetData();
-        WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     public async Task InitializeDataAsync()
@@ -112,6 +111,8 @@ public class SmsGatewayInputViewModel : ViewModelBase
         SgPassword = SecurityVault.Instance.GetGatewayPassword().Value ?? string.Empty;
         SgIP = _session.SmsService?.DeviceIP ?? string.Empty;
         SgPort = _session.SmsService?.Port.ToString() ?? "8080";
+
+        WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     public async Task ConfirmParameterChangeAsync()

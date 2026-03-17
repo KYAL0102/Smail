@@ -9,13 +9,15 @@ public static class ApiServer
 
     public static async Task RunAsync(string[] args, CancellationToken ct = default)
     { 
+        if(args.Length == 0) throw new ArgumentException("Missing arguments!");
+
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
             ApplicationName = "SmailAPI"
         });
 
-        var (pfxPath, pfxPwd) = NetworkManager.GetCertificateForLocalIp();
+        var (pfxPath, pfxPwd) = NetworkManager.GetCertificateForLocalIp(args[0]);
 
         // Add services to the container.
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -84,10 +86,6 @@ public static class ApiServer
 
 
         app.UseHttpsRedirection();
-        //app.MapHub<WebsocketHub>("/ws");
-        //app.MapControllers();
-
-        // Start the app without blocking
         await app.StartAsync(ct);
         
         _isReady.TrySetResult();

@@ -65,7 +65,7 @@ public class AesEncryptor
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
         aes.Key = key;
-        aes.IV = salt; // ⚠️ salt is IV
+        aes.IV = salt;
 
         byte[] decryptedBytes = aes.CreateDecryptor()
                                    .TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);

@@ -42,7 +42,8 @@ jobs:
             "Microsoft": {
               "ClientId": "${{ secrets.M_ID }}",
               "ClientSecret": "${{ secrets.M_SECRET }}"
-            }
+            },
+            "SmsHttpCertificateKey": "${{ secrets.SMS_HTTP_CERT_KEY }}"
           }
           EOF
 

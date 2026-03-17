@@ -20,7 +20,7 @@ sealed class Program
         var locator = new TestVelopackLocator(
             appId: "Smail",
             version: "0.1.0",
-            packagesDir: "@/home/yak/Documents/TanzaniaDocumentation/CodeProjects/Smail/SmailAvalonia/Releases"
+            packagesDir: "https://github.com/KYAL0102/Smail"
         );
         builder.SetLocator(locator);
 #endif

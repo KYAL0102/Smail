@@ -7,12 +7,10 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Asn1.X9;
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.Pkcs;
-using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto.Parameters;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 
 namespace Core.Services;
@@ -22,22 +20,38 @@ public static class NetworkManager
     // ----------------------------------------------------------------------
     //  PUBLIC ENTRY POINT
     // ----------------------------------------------------------------------
-    public static (string PfxPath, string Password) GetCertificateForLocalIp()
+    public static (string PfxPath, string Password) GetCertificateForLocalIp(string encryptionPassword)
     {
+        var encryptor = new AesEncryptor(encryptionPassword);
         string ip = GetLocalIPv4();
-        string password = "K1Nnay0102"; // TODO: UI solution to set it
-        //Console.WriteLine($"Detected LAN IP: {ip}");
-
         string workDir = GetCertWorkDirectory();
-
         string pfxPath = Path.Combine(workDir, "server.pfx");
+        string passwordPath = Path.Combine(workDir, "cert_pwd.txt");
 
-        if(File.Exists(pfxPath)) return (pfxPath, password);
+        if (File.Exists(pfxPath) && File.Exists(passwordPath))
+        {
+            string encryptedResult = File.ReadAllText(passwordPath);
+            var savedPassword = encryptor.Decrypt(encryptedResult);
+            
+            using var cert = X509CertificateLoader.LoadPkcs12FromFile(pfxPath, savedPassword);
+            
+            if (DateTime.UtcNow < cert.NotAfter.ToUniversalTime().AddMonths(-1))
+            {
+                Console.WriteLine("Certificate is still valid (more than 1 month)!");
+                return (pfxPath, savedPassword);
+            }
+            Console.WriteLine("Certificate is in its final month or expired. Regenerating...");
+        }
 
+        string newPassword = GenerateRandomPassword();
+        
         RunSmsGateCa(ip, workDir);
-        string pfx = ConvertToPfxDotNet(workDir, password);
+        ConvertToPfxDotNet(workDir, newPassword);
 
-        return (pfx, password);
+        var encryptedText = encryptor.Encrypt(newPassword);
+        File.WriteAllText(passwordPath, encryptedText);
+
+        return (pfxPath, newPassword);
     }
 
     // ----------------------------------------------------------------------
@@ -299,4 +313,12 @@ public static class NetworkManager
 
         return pfxPath;
     }
+
+    private static string GenerateRandomPassword()
+        {
+            byte[] randomBytes = new byte[24];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomBytes);
+            return Convert.ToBase64String(randomBytes);
+        }
 }
