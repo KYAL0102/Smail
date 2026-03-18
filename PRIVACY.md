@@ -1,0 +1,1 @@
+This app does not store any user data. It only uses your email for authentication purposes.

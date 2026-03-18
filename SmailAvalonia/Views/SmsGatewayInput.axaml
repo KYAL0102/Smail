@@ -34,7 +34,7 @@
     <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
 
     <!--Webhook Signing Key-->
-    <Label Content="Websocket Signing Key:" Grid.Row="3" Grid.Column="0"/>
+    <Label Content="Webhook Signing Key:" Grid.Row="3" Grid.Column="0"/>
     <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding WebhookSigningKey, Mode=TwoWay}"/>
 
     <SelectableTextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
