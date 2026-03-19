@@ -1,5 +1,10 @@
 # Smail
-Reach your audience instantly by sending unified messages across Email and SMS from a single desktop interface.
+
+<div align="center">
+  <img src="Smail.png" Height="300px" Width="Auto"/>
+
+  Reach your audience instantly by sending unified messages across Email and SMS from a single desktop interface.
+</div>
 
 ## Features
 

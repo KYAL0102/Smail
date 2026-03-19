@@ -7,6 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <UserSecretsId>3bbefbcb-573d-44cf-ad96-818888793ce4</UserSecretsId>
+    <ApplicationIcon>Assets/Smail.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
