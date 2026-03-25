@@ -13,7 +13,7 @@ public class AuthenticationViewModel : ViewModelBase
 {
     private readonly Window? _window = null;
 
-    private UserControl _currentControl = new SmsGatewayInput();
+    private UserControl _currentControl = new SmsGatewayInput(false);
     public UserControl CurrentControl 
     { 
         get => _currentControl;
@@ -78,23 +78,7 @@ public class AuthenticationViewModel : ViewModelBase
             if (!success) return;
         }
 
-        ExitAuthentication();
-    }
-
-    private void ExitAuthentication()
-    {
-        Messenger.Publish(new Message
-        {
-            Action = Globals.NewSessionAction,
-            Data = _sessionInMaking
-        });
-
-        Messenger.Publish(new Message
-        {
-            Action = Globals.NavigateToRecepientConfigurationAction
-        });
-
-        _window?.Close();
+        _window?.Close(_sessionInMaking);
     }
 
     private void ResetInput()
@@ -102,7 +86,7 @@ public class AuthenticationViewModel : ViewModelBase
         CanApply = true;
         if (CurrentControl is SmsGatewayInput smsInput)
         {
-            //TODO
+            smsInput.ResetData();
         }
         else if(CurrentControl is EmailInput emailInput)
         {
@@ -114,7 +98,7 @@ public class AuthenticationViewModel : ViewModelBase
     private void Skip()
     {
         if(CurrentControl is SmsGatewayInput) CurrentControl = new EmailInput();
-        else if(CurrentControl is EmailInput) ExitAuthentication();
+        else if(CurrentControl is EmailInput) _window?.Close(_sessionInMaking);
     }
 
     private async Task ApplySmsGatewayInput(SmsGatewayInput smsInput)

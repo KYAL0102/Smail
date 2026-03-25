@@ -7,9 +7,11 @@ public static class ApiServer
     private static readonly TaskCompletionSource _isReady = new();
     public static Task ReadyTask => _isReady.Task;
 
-    public static async Task RunAsync(string[] args, CancellationToken ct = default)
+    public static async Task RunAsync(SecurityVault vault, string[] args, CancellationToken ct = default)
     { 
         if(args.Length == 0) throw new ArgumentException("Missing arguments!");
+
+        var encryptionPwd = args[0];
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -17,10 +19,11 @@ public static class ApiServer
             ApplicationName = "SmailAPI"
         });
 
-        var (pfxPath, pfxPwd) = NetworkManager.GetCertificateForLocalIp(args[0]);
+        var (pfxPath, pfxPwd) = NetworkManager.GetCertificateForLocalIp(encryptionPwd);
 
         // Add services to the container.
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+        builder.Services.AddSingleton<SecurityVault>(vault);
         builder.Services.AddOpenApi();
         builder.Services.AddControllers();
         builder.Services.AddSignalR();

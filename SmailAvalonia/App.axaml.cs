@@ -32,10 +32,13 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         var services = new ServiceCollection();
+        var k = Program.Configuration["LocalCredentialKey"];
 
         services.AddSingleton<IConfiguration>(Program.Configuration);
         services.Configure<AuthSettings>(Program.Configuration);
+        services.AddSingleton<SecurityVault>(_ => new SecurityVault(k));
         services.AddSingleton<EmailProviderService>();
+        services.AddTransient<SmsService>();
 
         ServiceProvider = services.BuildServiceProvider();
 
@@ -47,11 +50,13 @@ public partial class App : Application
                 Dispatcher.UIThread.Post(() => desktop.Shutdown());
             };
 
+            var vault = ServiceProvider.GetRequiredService<SecurityVault>();
+
             Task.Run(async () => 
             {
                 try 
                 {
-                    await ApiServer.RunAsync([ Program.Configuration["SmsHttpCertificateKey"] ], _cts.Token);
+                    await ApiServer.RunAsync(vault, [ Program.Configuration["SmsHttpCertificateKey"] ], _cts.Token);
                 }
                 catch (Exception ex) 
                 {
@@ -65,8 +70,8 @@ public partial class App : Application
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
             desktop.MainWindow = new MainWindow(ApiServer.ReadyTask);
-            var control = new MainWindowViewModel(desktop.MainWindow);
-            desktop.MainWindow.DataContext = control;
+            //var control = new MainWindowViewModel(desktop.MainWindow);
+            //desktop.MainWindow.DataContext = control;
             desktop.Exit += (s, e) =>
             {
                 _cts.Cancel();

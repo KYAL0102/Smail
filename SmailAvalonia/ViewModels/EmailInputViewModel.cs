@@ -83,7 +83,7 @@ public class EmailInputViewModel : ViewModelBase
 
     public EmailInputViewModel(Session? session = null) 
     {
-        _providerService = App.ServiceProvider.GetRequiredService<EmailProviderService>();;
+        _providerService = App.ServiceProvider.GetRequiredService<EmailProviderService>();
         _session = session;
         Reset();
     }

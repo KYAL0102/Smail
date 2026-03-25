@@ -11,28 +11,19 @@ using DocumentFormat.OpenXml;
 using Avalonia.Threading;
 using Microsoft.Graph.Models;
 using Velopack;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SmailAvalonia.ViewModels;
 
 public class SettingsViewModel : ViewModelBase
 {
+    private readonly SecurityVault _securityVault;
     private Session _session;
     private Window? _window;
 
     public EmailInput? EmailInput { get; } = null;
 
     public SmsGatewayInput? SmsInput { get; } = null;
-
-    private string _encrPassphrase = string.Empty;
-    public string EncryptionPassphrase
-    {
-        get => _encrPassphrase;
-        set 
-        {
-            _encrPassphrase = value;
-            OnPropertyChanged();
-        }
-    }
 
     /*private string _whSigningKey = string.Empty;
     public string WebhookSigningKey
@@ -161,11 +152,11 @@ public class SettingsViewModel : ViewModelBase
 
     public SettingsViewModel(Session session, Window? window)
     {
+        _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _session = session;
         _window = window;
 
-        SmsInput = new(_session);
-        EncryptionPassphrase = SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty;
+        SmsInput = new(true, _session);
         EmailInput = new(_session);
 
         CurrentVersion = UpdateChecker.GetCurrentVersion();
@@ -312,7 +303,6 @@ public class SettingsViewModel : ViewModelBase
     private void ResetData()
     {
         SmsInput?.ResetData();
-        EncryptionPassphrase = SecurityVault.Instance.GetAesPassphrase().Value ?? string.Empty;
     }
 
     private async Task ApplySmsChangesAsync()
@@ -335,8 +325,7 @@ public class SettingsViewModel : ViewModelBase
             await SmsInput.AwaitAllTasksAsync();
         }
 
-        SecurityVault.Instance.SetGateWayEncryptionPhrase(EncryptionPassphrase);
-
+        await _securityVault.SaveToFileAsync();
         await Task.WhenAll(tasks);
 
         CanApply_SmsSettings = true;

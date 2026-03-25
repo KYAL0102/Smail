@@ -13,6 +13,7 @@ namespace Core.Services;
 
 public class SmsService
 {
+    private readonly SecurityVault _securityVault;
     private string _authToken = string.Empty;
     public string DeviceIP { get; private set; }
     public string Port { get; private set; }
@@ -20,8 +21,9 @@ public class SmsService
     private ConcurrentBag<Webhook> _webhooks = [];
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public SmsService(string ipAddress, string port, string? usr = null, string? pwd = null)
+    public SmsService(SecurityVault vault, string ipAddress, string port, string? usr = null, string? pwd = null)
     {
+        _securityVault = vault;
         var handler = new HttpClientHandler
         {
             UseProxy = false,
@@ -40,10 +42,10 @@ public class SmsService
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authToken);
     }
 
-    public static async Task<SmsService> CreateNewInstance(string ipAddress, string port, string usr, string pwd)
+    public static async Task<SmsService> CreateNewInstance(SecurityVault vault, string ipAddress, string port, string usr, string pwd)
     {
         await TestArguments(ipAddress, port, usr, pwd);
-        return new SmsService(ipAddress, port, usr, pwd);
+        return new SmsService(vault, ipAddress, port, usr, pwd);
     }
     
     public async Task UpdateGatewayParameters(string? ipAddress = null, string? port = null, string? usr = null, string? pwd = null)
@@ -52,11 +54,11 @@ public class SmsService
         
         ipAddress ??= DeviceIP;
         port      ??= Port;
-        usr       ??= SecurityVault.Instance.GetUsername();
+        usr       ??= _securityVault.SmsGatewayUsername;
         if (pwd == null)
         {
-            using var secret = SecurityVault.Instance.GetGatewayPassword();
-            pwd = secret.Value ?? string.Empty;
+            using var secret = _securityVault.GetGatewayPassword();
+            pwd = secret?.Value ?? string.Empty;
         }
 
         await TestArguments(ipAddress, port, usr, pwd);
@@ -64,7 +66,7 @@ public class SmsService
         DeviceIP = ipAddress;
         Port = port;
         UpdateToken(usr, pwd);
-        SecurityVault.Instance.SetGateWayCredentials(usr, pwd);
+        _securityVault.SetGateWayCredentials(usr, pwd);
     }
 
     public static async Task TestArguments(string ipAddress, string port, string usr, string pwd)
@@ -92,12 +94,12 @@ public class SmsService
 
     private void UpdateToken(string? username = null, string? password = null)
     {
-        var usr = username ?? SecurityVault.Instance.GetUsername();
+        var usr = username ?? _securityVault.SmsGatewayUsername;
         string? pwd;
         if (password != null) pwd = password;
         else
         {
-            using var vaultPwd = SecurityVault.Instance.GetGatewayPassword();
+            using var vaultPwd = _securityVault.GetGatewayPassword();
             pwd = vaultPwd.Value;
         }
 
@@ -178,15 +180,14 @@ public class SmsService
     {
         var url = $"http://{DeviceIP}:{Port}/message";
 
-        using var aesPassphraseAccessor = SecurityVault.Instance.GetAesPassphrase();
-        var aesPassphrase = aesPassphraseAccessor.Value;
+        using var aesPassphraseAccessor = _securityVault.GetAesPassphrase();
 
-        var isEncrypted = !string.IsNullOrEmpty(aesPassphrase);
-        var encryptor = new AesEncryptor(aesPassphrase);
+        var isEncrypted = !string.IsNullOrEmpty(aesPassphraseAccessor?.Value ?? string.Empty);
+        var encryptor = new AesEncryptor(aesPassphraseAccessor?.Value ?? string.Empty);
         if(isEncrypted)
         {
-            message = encryptor.Encrypt(message);
-            numbers = [.. numbers.Select(n => encryptor.Encrypt(n))];
+            message = encryptor.EncryptSMS(message);
+            numbers = [.. numbers.Select(n => encryptor.EncryptSMS(n))];
         }
 
         var payload = new SendMessageSchema
@@ -212,7 +213,7 @@ public class SmsService
             foreach(var r in recipients)
             {
                 var encryptedNumber = r.PhoneNumber;
-                r.PhoneNumber = encryptor.Decrypt(r.PhoneNumber);
+                r.PhoneNumber = encryptor.DecryptSMS(r.PhoneNumber);
             }
         }
 

@@ -24,10 +24,6 @@
 
         <!--Sms Gateway Credentials-->
         <ContentControl Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="{Binding SmsInput}"/>
-
-        <!--Encryption Passphrase-->
-        <Label Content="Encryption Passphrase:" Grid.Row="1" Grid.Column="0"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding EncryptionPassphrase, Mode=TwoWay}"/>
         
         <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
           <Button Content="Reset" HorizontalAlignment="Right" 

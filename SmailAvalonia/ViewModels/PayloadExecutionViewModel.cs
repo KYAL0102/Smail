@@ -11,16 +11,19 @@ using Core.Services;
 using Microsoft.Extensions.Localization;
 using System.Collections.Generic;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SmailAvalonia.ViewModels;
 
 public class PayloadExecutionViewModel: ViewModelBase
 {
+    private readonly SecurityVault _securityVault;
     private MessagePayload _payload { get; init; }
     private SmsService? _smsService { get; init; }
     private EmailService? _emailService { get; init; }
     public PayloadExecutionViewModel(MessagePayload payload, SmsService? smsService, EmailService? emailService)
     {
+        _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _payload = payload;
         _smsService = smsService;
         _emailService = emailService;
@@ -184,11 +187,10 @@ public class PayloadExecutionViewModel: ViewModelBase
         
         var number = response.Payload?.PhoneNumber;
 
-        var passphrase = SecurityVault.Instance.GetAesPassphrase().Value;
-        if(!string.IsNullOrEmpty(passphrase))
+        if(!string.IsNullOrEmpty(_securityVault.GetAesPassphrase()?.Value ?? string.Empty))
         {
-            var encryptor = new AesEncryptor(passphrase);
-            number = encryptor.Decrypt(number);
+            var encryptor = new AesEncryptor(_securityVault.GetAesPassphrase()?.Value ?? string.Empty);
+            number = encryptor.DecryptSMS(number);
         }
         
         var cs = SmsContactStates

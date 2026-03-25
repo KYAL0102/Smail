@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Avalonia.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -20,21 +21,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public Dictionary<string, PayloadExecutionControl> ExecutionHistory { get; } = [];
 
-    private Session? _currentSession = null;
-    public Session? CurrentSession 
+    public Session? _currentSession = null;
+    public Session? CurrentSession
     {
         get => _currentSession;
-        set 
+        set
         {
             _currentSession = value;
             OnPropertyChanged();
         }
     }
 
-    private UserControl? _currentPage = null;
+    public UserControl? _currentPage = null;
     public UserControl? CurrentPage
     {
-        get { return _currentPage; }
+        get => _currentPage;
         set
         {
             _currentPage = value;
@@ -50,7 +51,6 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _window = window;
         _serverTask = serverTask;
-        //CurrentPage = new AuthenticationControl();
         
         Messenger.Subscribe(Globals.NewSessionAction, message => AssignNewSession(message.Data));
         Messenger.Subscribe(Globals.NavigateToMessageConfigurationAction, _ => NavigateToPayloadConfiguration());
@@ -69,29 +69,29 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task InitializeDataAsync()
     {
-        if(_serverTask != null) 
-            await _serverTask;
+        if(_serverTask != null) await _serverTask;
         await WsClientService.Instance.ConnectToServerWsHub();
 
-        //TODO: This is a temporary solution. Implement input and permanent storage for signing key/aes passphrase
-        //await WsClientService.Instance.UpdateWebhookSigningKey("tZSihgTH");
-        //SecurityVault.Instance.SetWebsocketSigningKey("tZSihgTH");
-        //SecurityVault.Instance.SetGateWayEncryptionPhrase("pwd");
-        if(_window != null)
+        var dialogWindow = new Window
         {
-            await Dispatcher.UIThread.InvokeAsync(async () => 
-            {
-                Window vm = new Window
-                {
-                    Title = "Create new Session",
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner
-                };
-                var control = new AuthenticationControl(vm);
-                vm.Content = control;
+            Title = "Create new Session",
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Width = 600, Height = 450
+        };
 
-                await vm.ShowDialog(_window);
-            });
+        var control = new AuthenticationControl(dialogWindow);
+        dialogWindow.Content = control;
+
+        var sessionResult = await dialogWindow.ShowDialog<Session>(_window);
+        
+        if (sessionResult == null)
+        {
+            Console.WriteLine("User clicked X or cancelled. Creating default session.");
+            sessionResult = new Session(); 
         }
+
+        CurrentSession = sessionResult;
+        NavigateToRecepientsConfiguration();
     }
 
     public async Task OnShutdownAsync()
@@ -132,11 +132,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void NavigateToRecepientsConfiguration()
     {
-        if (CurrentSession != null ) CurrentPage = new RecepientConfiguration(CurrentSession);
+        Console.WriteLine("Navigating to recepient configuration...");
+        if (CurrentSession != null) CurrentPage = new RecepientConfiguration(CurrentSession);
     }
 
     private void NavigateToPayloadConfiguration()
     {
+        Console.WriteLine("Navigating to text-configuration...");
         if (CurrentSession != null ) CurrentPage = new MessageConfigurationControl(CurrentSession);
     }
     

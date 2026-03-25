@@ -31,7 +31,7 @@ public static class NetworkManager
         if (File.Exists(pfxPath) && File.Exists(passwordPath))
         {
             string encryptedResult = File.ReadAllText(passwordPath);
-            var savedPassword = encryptor.Decrypt(encryptedResult);
+            var savedPassword = encryptor.DecryptSMS(encryptedResult);
             
             using var cert = X509CertificateLoader.LoadPkcs12FromFile(pfxPath, savedPassword);
             
@@ -48,7 +48,7 @@ public static class NetworkManager
         RunSmsGateCa(ip, workDir);
         ConvertToPfxDotNet(workDir, newPassword);
 
-        var encryptedText = encryptor.Encrypt(newPassword);
+        var encryptedText = encryptor.EncryptSMS(newPassword);
         File.WriteAllText(passwordPath, encryptedText);
 
         return (pfxPath, newPassword);

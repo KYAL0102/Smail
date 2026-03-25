@@ -2,14 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
 using Core.Models;
 using Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using SmailAvalonia.Services;
 
 namespace SmailAvalonia.ViewModels;
 
 public class SmsGatewayInputViewModel : ViewModelBase
 {
+    private const string BTN_TEXT_EXTENDABLE = "Extend input.";
+    private const string BTN_TEXT_RETRACTABLE = "Retract input.";
+    private readonly SecurityVault _securityVault;
     private Session? _session = null;
     private List<Task> _tasks = [];
     private string _sgIp = string.Empty;
@@ -62,8 +67,19 @@ public class SmsGatewayInputViewModel : ViewModelBase
         get => _webhookSigningKey;
         set
         {
-            OnPropertyChanged();
             _webhookSigningKey = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _encrPassphrase = string.Empty;
+    public string EncryptionPassphrase
+    {
+        get => _encrPassphrase;
+        set 
+        {
+            _encrPassphrase = value;
+            OnPropertyChanged();
         }
     }
 
@@ -77,17 +93,75 @@ public class SmsGatewayInputViewModel : ViewModelBase
             OnPropertyChanged();
         }
     }
-    
-    public SmsGatewayInputViewModel(Session? session)
+
+    private bool _permanentCredentialsVisible = true;
+    public bool PermanentCredentialsVisible
     {
+        get => _permanentCredentialsVisible;
+        set
+        {
+            _permanentCredentialsVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private bool _settingMode;
+    public bool SettingModeEnabled 
+    {
+        get => _settingMode;
+        set
+        {
+            _settingMode = value;
+
+            PermanentCredentialsVisible = _settingMode;
+
+            OnPropertyChanged();
+        }
+    }
+
+    private string _extendBtnText = BTN_TEXT_EXTENDABLE;
+    public string ExtendBtnText
+    {
+        get => _extendBtnText;
+        set
+        {
+            _extendBtnText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public RelayCommand ShowCredentialInput { get; set; }
+    
+    public SmsGatewayInputViewModel(bool settingMode, Session? session = null)
+    {
+        _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
+        SettingModeEnabled = settingMode;
         _session = session;
 
-        ResetData();
+        ShowCredentialInput = new(ChangeLeftOverCredentialVisibility);
     }
 
     public async Task InitializeDataAsync()
     {
-        await Task.CompletedTask;
+        try
+        {
+            await _securityVault.LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+            SettingModeEnabled = true;
+        }
+
+        ResetData();
+    }
+
+    public void ChangeLeftOverCredentialVisibility()
+    {
+        PermanentCredentialsVisible = !PermanentCredentialsVisible;
+
+        if(!PermanentCredentialsVisible) ExtendBtnText = BTN_TEXT_EXTENDABLE;
+        else ExtendBtnText = BTN_TEXT_RETRACTABLE;
     }
 
     private async Task TestGateWayArguments()
@@ -96,23 +170,34 @@ public class SmsGatewayInputViewModel : ViewModelBase
         {
             await SmsService.TestArguments(SgIP, SgPort, SgUsername, SgPassword);
         }
-        catch(Exception e)
+        catch(Exception ex)
         {
-            ErrorMessage = $"{e.Message}";
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+            ErrorMessage = $"{ex.Message}";
         }
     }
 
     public void ResetData()
     {
-        if(_session == null) return;
-
         ErrorMessage = string.Empty;
-        SgUsername = SecurityVault.Instance.GetUsername();
-        SgPassword = SecurityVault.Instance.GetGatewayPassword().Value ?? string.Empty;
+
+        // From SecurityVault (Permanent storage)
+        try
+        {
+            SgUsername = _securityVault.SmsGatewayUsername;
+            SgPassword = _securityVault.GetGatewayPassword()?.Value ?? string.Empty;
+            EncryptionPassphrase = _securityVault.GetAesPassphrase()?.Value ?? string.Empty;
+            WebhookSigningKey = _securityVault.GetWhSigningKey()?.Value ?? string.Empty;
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+            SettingModeEnabled = true;
+        }
+
+        if(_session == null) return;
         SgIP = _session.SmsService?.DeviceIP ?? string.Empty;
         SgPort = _session.SmsService?.Port.ToString() ?? "8080";
-
-        WebhookSigningKey = SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty;
     }
 
     public async Task ConfirmParameterChangeAsync()
@@ -125,14 +210,17 @@ public class SmsGatewayInputViewModel : ViewModelBase
             await _session.SmsService.DeregisterWebhooksAsync();
             await _session.SmsService.UpdateGatewayParameters(SgIP, SgPort, SgUsername, SgPassword);
             
-            await WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey);
-            SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
+            _securityVault.SetWebhookSigningKey(WebhookSigningKey);
+            _securityVault.SetGateWayEncryptionPhrase(EncryptionPassphrase);
+            
+            await _securityVault.SaveToFileAsync();
         }
-        catch(Exception e)
+        catch(Exception ex)
         {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
             Dispatcher.UIThread.Post(() => 
             {
-                ErrorMessage = $"{e.Message}";
+                ErrorMessage = $"{ex.Message}";
             });
         }
 
@@ -145,7 +233,7 @@ public class SmsGatewayInputViewModel : ViewModelBase
         SmsService? smsService = null;
         try
         {
-            smsService = await SmsService.CreateNewInstance(SgIP, SgPort, SgUsername, SgPassword);
+            smsService = await SmsService.CreateNewInstance(_securityVault, SgIP, SgPort, SgUsername, SgPassword);
         }
         catch(Exception e)
         {
@@ -156,10 +244,13 @@ public class SmsGatewayInputViewModel : ViewModelBase
             return null;
         }
         
-        SecurityVault.Instance.SetGateWayCredentials(SgUsername, SgPassword);
-
-        await WsClientService.Instance.UpdateWebhookSigningKey(WebhookSigningKey);
-        SecurityVault.Instance.SetWebsocketSigningKey(WebhookSigningKey);
+        if(SettingModeEnabled)
+        {
+            _securityVault.SetGateWayCredentials(SgUsername, SgPassword);
+            _securityVault.SetWebhookSigningKey(WebhookSigningKey);
+            _securityVault.SetGateWayEncryptionPhrase(EncryptionPassphrase);
+            _tasks.Add(Task.Run(_securityVault.SaveToFileAsync));
+        }
 
         _tasks.Add(Task.Run(smsService.RegisterWebhooks));
 

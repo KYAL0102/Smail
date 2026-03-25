@@ -1,9 +1,9 @@
-# Smail
+# SMail
 
 <div align="center">
   <img src="Smail.png" Height="300px" Width="Auto"/>
 
-  Reach your audience instantly by sending unified messages across Email and SMS from a single desktop interface.
+  Reach your audience instantly by sending unified messages across SMS and Email from a single desktop interface.
 </div>
 
 ## Features
@@ -34,7 +34,7 @@ Currently, we support **Windows and Linux (x64)** and the application is self-co
 
 ## 💻 System Requirements
 
-This application is designed to be lightweight and portable. It does not require a pre-installed .NET Runtime if using the [latest release](link-to-your-release).
+This application is designed to be lightweight and portable. It does not require a pre-installed .NET Runtime if using the [latest release](https://github.com/KYAL0102/Smail/releases).
 
 ### Hardware
 * **Architecture:** x64 (64-bit)
@@ -87,9 +87,9 @@ This application is designed to be lightweight and portable. It does not require
 To build this project from source, you will need the **.NET 10.0 SDK**.
 
 1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/KYAL0102/Smail.git](https://github.com/KYAL0102/Smail.git)
-   cd Smail
+    ```bash
+    git clone https://github.com/KYAL0102/Smail.git
+    cd Smail
 
 2. **Add Environment Variables**
 

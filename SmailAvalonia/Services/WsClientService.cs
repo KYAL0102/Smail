@@ -57,17 +57,4 @@ public class WsClientService
             }
         }
     }
-
-    public async Task UpdateWebhookSigningKey(string? key)
-    {
-        if(_connection == null)
-        {
-            Console.WriteLine("Attempted to update without active Websocket connection.");
-            return;
-        }
-
-        key ??= string.Empty;
-
-        await _connection.InvokeAsync("UpdateWebsocketSigningKey", key);
-    }
 }

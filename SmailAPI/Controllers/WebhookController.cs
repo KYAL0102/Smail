@@ -12,7 +12,7 @@ namespace SmailAPI.Controllers;
 
 [ApiController]
 [Route("api/webhook")]
-public class WebhookController(IHubContext<WebsocketHub> _hub) : ControllerBase
+public class WebhookController(IHubContext<WebsocketHub> _hub, SecurityVault SecurityVault) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> ReceiveWebhook()
@@ -23,7 +23,7 @@ public class WebhookController(IHubContext<WebsocketHub> _hub) : ControllerBase
         var body = await reader.ReadToEndAsync();
 
         // Compute local HMAC
-        var key = Encoding.UTF8.GetBytes(SecurityVault.Instance.GetWhSigningKey().Value ?? string.Empty);
+        var key = Encoding.UTF8.GetBytes(SecurityVault.GetWhSigningKey()?.Value ?? string.Empty);
         using var hmac = new HMACSHA256(key);
         byte[] data = Encoding.UTF8.GetBytes(body + timestamp);
         string computed = Convert.ToHexStringLower(hmac.ComputeHash(data)).Replace("-", "").ToLowerInvariant();

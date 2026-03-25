@@ -23,8 +23,8 @@ public class AesEncryptorTests
         string original = "Hello Avalonia and Velopack!";
 
         // Act
-        string encrypted = _encryptor.Encrypt(original);
-        string decrypted = _encryptor.Decrypt(encrypted);
+        string encrypted = _encryptor.EncryptSMS(original);
+        string decrypted = _encryptor.DecryptSMS(encrypted);
 
         // Assert
         Assert.That(decrypted, Is.EqualTo(original));
@@ -36,8 +36,8 @@ public class AesEncryptorTests
         // Because of the random salt, encrypting twice should never look the same
         string input = "Consistent Secret";
 
-        string first = _encryptor.Encrypt(input);
-        string second = _encryptor.Encrypt(input);
+        string first = _encryptor.EncryptSMS(input);
+        string second = _encryptor.EncryptSMS(input);
 
         Assert.That(first, Is.Not.EqualTo(second));
     }
@@ -47,14 +47,14 @@ public class AesEncryptorTests
     {
         // Arrange
         string original = "Top Secret Data";
-        string encrypted = _encryptor.Encrypt(original);
+        string encrypted = _encryptor.EncryptSMS(original);
         
         var wrongEncryptor = new AesEncryptor("WrongPassword");
 
         // Act & Assert
         // Usually, AES throws a CryptographicException due to padding mismatch 
         // when the key is wrong.
-        Assert.Throws<CryptographicException>(() => wrongEncryptor.Decrypt(encrypted));
+        Assert.Throws<CryptographicException>(() => wrongEncryptor.DecryptSMS(encrypted));
     }
 
     [Test]
@@ -65,8 +65,8 @@ public class AesEncryptorTests
         string expected = "Line1\nLine2\nLine3";
 
         // Act
-        string encrypted = _encryptor.Encrypt(input);
-        string decrypted = _encryptor.Decrypt(encrypted);
+        string encrypted = _encryptor.EncryptSMS(input);
+        string decrypted = _encryptor.DecryptSMS(encrypted);
 
         // Assert
         Assert.That(decrypted, Is.EqualTo(expected));
@@ -77,8 +77,8 @@ public class AesEncryptorTests
     [TestCase("Very long string with symbols !@#$%^&*()_+")]
     public void Encrypt_HandlesVariousInputs(string input)
     {
-        string encrypted = _encryptor.Encrypt(input);
-        string decrypted = _encryptor.Decrypt(encrypted);
+        string encrypted = _encryptor.EncryptSMS(input);
+        string decrypted = _encryptor.DecryptSMS(encrypted);
 
         Assert.That(decrypted, Is.EqualTo(input.Replace("\r\n", "\n")));
     }
@@ -88,6 +88,6 @@ public class AesEncryptorTests
     {
         string garbage = "$aes-256$short$string";
         
-        Assert.Throws<ArgumentException>(() => _encryptor.Decrypt(garbage));
+        Assert.Throws<ArgumentException>(() => _encryptor.DecryptSMS(garbage));
     }
 }

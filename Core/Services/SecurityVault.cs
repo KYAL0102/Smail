@@ -1,28 +1,85 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace Core.Services;
 
-public sealed class SecurityVault : IDisposable
+public class SecurityVault : IDisposable
 {
-    private static readonly Lazy<SecurityVault> _lazyInstance = new(() => new SecurityVault());
-    public static SecurityVault Instance => _lazyInstance.Value;
+    private const string FileName = "vault.data";
+    private bool _loaded = false;
 
-    // Backing fields - private
     private SecureString? _aesPassphrase;
     private SecureString? _whSigningKey;
     private SecureString? _gatewayPassword;
-    private SecureString? _emailPassword;
+    private readonly byte[]? _key = null;
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
-    public string Email { get; private set; } = string.Empty;
 
-    // ── Public API ──────────────────────────────────────────────────────────────
+    public SecurityVault(string? key = null)
+    {
+        if (!string.IsNullOrEmpty(key)) 
+            _key = SHA256.HashData(Encoding.UTF8.GetBytes(key));
+    }
 
-    public void SetWebsocketSigningKey(string key) => _whSigningKey = StringToSecureString(key);
+    // ── Persistence Logic ──────────────────────────────────────────────────────
 
-    public void SetGateWayEncryptionPhrase(string passphrase) => _aesPassphrase = StringToSecureString(passphrase);
+    public async Task SaveToFileAsync()
+    {
+        if (_key == null) return;
+
+        var data = new VaultDataDto
+        {
+            AesPassphrase = SecureStringToString(_aesPassphrase) ?? string.Empty,
+            WhSigningKey = SecureStringToString(_whSigningKey) ?? string.Empty,
+            GatewayUsername = SmsGatewayUsername,
+            GatewayPassword = SecureStringToString(_gatewayPassword) ?? string.Empty
+        };
+
+        string json = JsonSerializer.Serialize(data);
+        string encrypted = AesEncryptor.Encrypt(json, _key);
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), FileName);
+        await File.WriteAllTextAsync(path, encrypted);
+    }
+
+    public async Task LoadAsync()
+    {
+        if (_key == null || _loaded) return;
+        //if (_aesPassphrase != null || _gatewayPassword != null) return;
+
+        var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), FileName);
+
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException("Vault file missing and no data in memory.");
+
+        try
+        {
+            string encrypted = await File.ReadAllTextAsync(filePath);
+            string? json = AesEncryptor.Decrypt(encrypted, _key);
+            
+            if (string.IsNullOrEmpty(json)) throw new Exception("Decryption failed or data corrupted.");
+
+            var data = JsonSerializer.Deserialize<VaultDataDto>(json);
+            if (data != null)
+            {
+                _aesPassphrase = StringToSecureString(data.AesPassphrase);
+                _whSigningKey = StringToSecureString(data.WhSigningKey);
+                SmsGatewayUsername = data.GatewayUsername ?? string.Empty;
+                _gatewayPassword = StringToSecureString(data.GatewayPassword);
+            }
+
+            _loaded = true;
+        }
+        catch (Exception ex)
+        {
+            throw new SecurityException("Failed to load secure vault.", ex);
+        }
+    }
+
+    // ── Public API (Modified to Auto-Save) ──────────────────────────────────────
 
     public void SetGateWayCredentials(string usr, string? pwd)
     {
@@ -30,37 +87,50 @@ public sealed class SecurityVault : IDisposable
         _gatewayPassword = StringToSecureString(pwd);
     }
 
-    public void SetEmailCredentials(string email, string password)
+    public void SetWebhookSigningKey(string whSigningKey)
     {
-        Email = email;
-        _emailPassword = StringToSecureString(password);
+        _whSigningKey = StringToSecureString(whSigningKey.Trim());
     }
 
-    // Getters return disposable wrapper - forces caller to use using() or Dispose()
-    public SecureStringAccessor GetAesPassphrase() => new(_aesPassphrase);
-    public SecureStringAccessor GetWhSigningKey() => new(_whSigningKey);
-    public SecureStringAccessor GetGatewayPassword() => new(_gatewayPassword);
-    public SecureStringAccessor GetEmailPassword() => new(_emailPassword);
-
-    public string GetUsername() => SmsGatewayUsername;
-    public string GetEmail() => Email;
-
-    /// <summary>
-    /// Clear all sensitive data from memory
-    /// </summary>
-    public void Clear()
+    public void SetGateWayEncryptionPhrase(string passphrase)
     {
-        ClearSecureString(ref _aesPassphrase);
-        ClearSecureString(ref _whSigningKey);
-        ClearSecureString(ref _gatewayPassword);
-        ClearSecureString(ref _emailPassword);
-        SmsGatewayUsername = string.Empty;
-        Email = string.Empty;
+        _aesPassphrase = StringToSecureString(passphrase.Trim());
     }
 
-    public void Dispose()
+    public SecureStringAccessor? GetAesPassphrase() 
     {
-        Clear();
+        if (_aesPassphrase == null)
+            return null;
+
+        return new(_aesPassphrase);
+    }
+
+    public SecureStringAccessor? GetGatewayPassword()
+    {
+        if (_gatewayPassword == null)
+            return null;
+
+        return new(_gatewayPassword);
+    }
+
+    public SecureStringAccessor? GetWhSigningKey()
+    {
+        if (_whSigningKey == null)
+            return null;
+        
+        return new(_whSigningKey);
+    }
+
+    // ── DTO for Serialization ──────────────────────────────────────────────────
+    
+    private class VaultDataDto
+    {
+        public string? AesPassphrase { get; set; }
+        public string? WhSigningKey { get; set; }
+        public string? GatewayUsername { get; set; }
+        public string? GatewayPassword { get; set; }
+        public string? Email { get; set; }
+        public string? EmailPassword { get; set; }
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -130,4 +200,20 @@ public sealed class SecurityVault : IDisposable
 
         public static implicit operator string?(SecureStringAccessor a) => a._value;
     }
+
+     /// <summary>
+    /// Clear all sensitive data from memory
+    /// </summary>
+    public void Clear()
+    {
+        ClearSecureString(ref _aesPassphrase);
+        ClearSecureString(ref _whSigningKey);
+        ClearSecureString(ref _gatewayPassword);
+        SmsGatewayUsername = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        Clear();
+    } 
 }

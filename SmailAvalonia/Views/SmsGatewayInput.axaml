@@ -13,6 +13,8 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="Auto"/>
@@ -27,17 +29,39 @@
     <Label Content="Port:" Grid.Row="0" Grid.Column="2"/>
     <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding SgPort, Mode=TwoWay}"/>
 
-    <Label Content="Username:" Grid.Row="1" Grid.Column="0"/>
-    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding SgUsername, Mode=TwoWay}"/>
+    <Button Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" IsVisible="{Binding !SettingModeEnabled}"
+            Command="{Binding ShowCredentialInput}"
+            Background="Transparent"
+            BorderThickness="0"
+            Padding="0"
+            Foreground="Gray"
+            Cursor="Hand"
+            HorizontalAlignment="Right">
+        <Button.Styles>
+            <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="DarkGray" />
+            </Style>
+        </Button.Styles>
+        <TextBlock Text="{Binding ExtendBtnText}"
+                  TextDecorations="Underline"/>
+    </Button>
 
-    <Label Content="Password:" Grid.Row="2" Grid.Column="0"/>
-    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}"/>
+    <Label Content="Username:" Grid.Row="2" Grid.Column="0" IsVisible="{Binding PermanentCredentialsVisible}"/>
+    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding SgUsername, Mode=TwoWay}" IsVisible="{Binding PermanentCredentialsVisible}"/>
+
+    <Label Content="Password:" Grid.Row="3" Grid.Column="0" IsVisible="{Binding PermanentCredentialsVisible}"/>
+    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding SgPassword, Mode=TwoWay}" IsVisible="{Binding PermanentCredentialsVisible}"/>
 
     <!--Webhook Signing Key-->
-    <Label Content="Webhook Signing Key:" Grid.Row="3" Grid.Column="0"/>
-    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding WebhookSigningKey, Mode=TwoWay}"/>
+    <Label Content="Webhook Signing Key:" Grid.Row="4" Grid.Column="0" IsVisible="{Binding PermanentCredentialsVisible}"/>
+    <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding WebhookSigningKey, Mode=TwoWay}" IsVisible="{Binding PermanentCredentialsVisible}"/>
 
-    <SelectableTextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" 
+    <!--Encryption Passphrase-->
+    <Label Content="Encryption Passphrase:" Grid.Row="5" Grid.Column="0" IsVisible="{Binding PermanentCredentialsVisible}"/>
+    <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" PasswordChar="*" Text="{Binding EncryptionPassphrase, Mode=TwoWay}" IsVisible="{Binding PermanentCredentialsVisible}"/>
+
+    <SelectableTextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" 
                         Foreground="Red" TextWrapping="Wrap"
                         Text="{Binding ErrorMessage, Mode=TwoWay}"/>
   </Grid>
