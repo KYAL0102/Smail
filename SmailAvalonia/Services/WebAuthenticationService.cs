@@ -12,6 +12,7 @@ using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient;
 using Duende.IdentityModel.OidcClient.Browser;
 using System.Diagnostics;
+using Duende.IdentityModel.OidcClient.Results;
 
 namespace SmailAvalonia.Services;
 
@@ -24,33 +25,7 @@ public static class WebAuthenticationService
 
     public static async Task<LoginResult> GetTokenFromUserWebPermissionAsync(Provider provider, CancellationToken ct, string email = "")
     {
-        string? secret = null;
-        if (provider.Name == "Google") secret = provider.Identification?.ClientSecret;
-
-        var browser = new SystemBrowser(0); 
-        var port = browser.Port;
-
-        var options = new OidcClientOptions
-        {
-            Authority = $"https://{provider.AuthorityUrl}",
-            ClientId = provider.Identification?.ClientId,
-            ClientSecret = secret,
-            Scope = provider.Scope,
-            RedirectUri = $"http://localhost:{port}",
-            Browser = browser,//new SystemBrowser(port: 45454), 
-            Policy = new Policy 
-            { 
-                Discovery = new DiscoveryPolicy
-                {
-                    ValidateEndpoints = false,
-                    ValidateIssuerName = false
-                },
-                //RequireAccessTokenHash = true 
-            },
-            LoadProfile = true
-        };
-
-        var client = new OidcClient(options);
+        var client = CreateClient(provider);
 
         var loginParams = new Parameters { { "prompt", "consent" } };
         if(!string.IsNullOrEmpty(email)) loginParams.Add("login_hint", email);
@@ -61,7 +36,7 @@ public static class WebAuthenticationService
 
         using (ct.Register(() => _manualUrlTaskSource.TrySetCanceled()))
         {
-            var browserTask = options.Browser.InvokeAsync(new BrowserOptions(state.StartUrl, options.RedirectUri), ct);
+            var browserTask = client.Options.Browser.InvokeAsync(new BrowserOptions(state.StartUrl, client.Options.RedirectUri), ct);
             var manualTask = _manualUrlTaskSource.Task;
 
             try 
@@ -102,6 +77,44 @@ public static class WebAuthenticationService
                 throw; // Re-throw so your ViewModel knows to reset CanApply
             }
         }
+    }
+
+    public static async Task<RefreshTokenResult> RefreshPackageAsync(Provider provider, string refreshToken)
+    {
+        var _oidcClient = CreateClient(provider);
+
+        return await _oidcClient.RefreshTokenAsync(refreshToken);
+    }
+
+    private static OidcClient CreateClient(Provider provider)
+    {
+        string? secret = null;
+        if (provider.Name == "Google") secret = provider.Identification?.ClientSecret;
+
+        var browser = new SystemBrowser(0); 
+        var port = browser.Port;
+
+        var options = new OidcClientOptions
+        {
+            Authority = $"https://{provider.AuthorityUrl}",
+            ClientId = provider.Identification?.ClientId,
+            ClientSecret = secret,
+            Scope = provider.Scope,
+            RedirectUri = $"http://localhost:{port}",
+            Browser = browser,//new SystemBrowser(port: 45454), 
+            Policy = new Policy 
+            { 
+                Discovery = new DiscoveryPolicy
+                {
+                    ValidateEndpoints = false,
+                    ValidateIssuerName = false
+                },
+                //RequireAccessTokenHash = true 
+            },
+            LoadProfile = true
+        };
+
+        return new OidcClient(options);
     }
 
     private static ProviderSecrets? LoadSecretsFromJson(string path)

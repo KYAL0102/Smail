@@ -39,6 +39,7 @@ public partial class App : Application
         services.AddSingleton<SecurityVault>(_ => new SecurityVault(k));
         services.AddSingleton<EmailProviderService>();
         services.AddTransient<SmsService>();
+        services.AddTransient<EmailService>();
 
         ServiceProvider = services.BuildServiceProvider();
 

@@ -12,6 +12,7 @@ namespace SmailAvalonia.ViewModels;
 
 public class EmailInputViewModel : ViewModelBase
 {
+    private readonly SecurityVault _securityVault;
     private readonly EmailProviderService _providerService;
     private Session? _session;
     private CancellationTokenSource? _loginCts;
@@ -83,6 +84,7 @@ public class EmailInputViewModel : ViewModelBase
 
     public EmailInputViewModel(Session? session = null) 
     {
+        _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _providerService = App.ServiceProvider.GetRequiredService<EmailProviderService>();
         _session = session;
         Reset();
@@ -111,14 +113,45 @@ public class EmailInputViewModel : ViewModelBase
     public async Task<EmailService> ConfirmLoginAsync()
     {
         ErrorMessage = string.Empty;
+        var tokenPackage = _securityVault.GetPackageForEmail(Email);
         var provider = await _providerService.GetServerProviderFromEmailAsync(Email);
 
-        if(provider != null)
+        if(provider == null) throw new ArgumentException("Email-Provider was null.");
+
+        if(tokenPackage != null)
         {
-            var loginResult = await LoginViaOAuth(provider);
-            return new EmailService(Email, loginResult, provider);
+            if(tokenPackage.AccessTokenExpiration < DateTimeOffset.UtcNow)
+            {
+                var result = await WebAuthenticationService.RefreshPackageAsync(provider, tokenPackage.RefreshToken);
+
+                if(!result.IsError)
+                {
+                    Console.WriteLine("Email-Accesstoken successfully renewed!");
+                    _securityVault.UpdatePackageInListViaRefreshTokenResult(Email, result);
+                    await _securityVault.SaveToFileAsync();
+                    return new EmailService(tokenPackage, provider);
+                }
+                else Console.WriteLine($"Failed to renew accesstoken -> {result.ErrorDescription}");
+            }
+            else
+            {
+                Console.WriteLine("Email-Accesstoken is still valid!");
+                return new EmailService(tokenPackage, provider);
+            }
         }
-        else throw new ArgumentException("Email-Provider was null.");
+
+        var loginResult = await LoginViaOAuth(provider);
+
+        var package = new TokenPackage();
+        package.Email = Email;
+        package.AccessToken = loginResult.AccessToken;
+        package.AccessTokenExpiration = loginResult.AccessTokenExpiration;
+        package.RefreshToken = loginResult.RefreshToken;
+            
+        _securityVault.AddPackageToList(package);
+        await _securityVault.SaveToFileAsync();
+                
+        return new EmailService(package, provider);
     }
 
     public void Reset()
@@ -126,7 +159,7 @@ public class EmailInputViewModel : ViewModelBase
         if(_session != null)
         {
             if(_session.EmailService == null) Email = string.Empty;
-            else Email = _session.EmailService.Email;
+            else Email = _session.EmailService.TokenPackage.Email;
             IsEmailboxEditable = false;
         }
         else IsEmailboxEditable = true;

@@ -90,8 +90,8 @@ public class AuthenticationViewModel : ViewModelBase
         }
         else if(CurrentControl is EmailInput emailInput)
         {
+            emailInput.Reset();
             loginTask = null;
-            //emailInput.Reset(); -> EmailInput already resets when an exception occurs
         }
     }
 

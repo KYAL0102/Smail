@@ -4,6 +4,8 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Core.Models;
+using Duende.IdentityModel.OidcClient.Results;
 
 namespace Core.Services;
 
@@ -12,12 +14,16 @@ public class SecurityVault : IDisposable
     private const string FileName = "vault.data";
     private bool _loaded = false;
 
+    // SMS
     private SecureString? _aesPassphrase;
     private SecureString? _whSigningKey;
     private SecureString? _gatewayPassword;
     private readonly byte[]? _key = null;
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
+
+    // EMAIL
+    private List<TokenPackage> _tokenPackages = [];
 
     public SecurityVault(string? key = null)
     {
@@ -36,7 +42,8 @@ public class SecurityVault : IDisposable
             AesPassphrase = SecureStringToString(_aesPassphrase) ?? string.Empty,
             WhSigningKey = SecureStringToString(_whSigningKey) ?? string.Empty,
             GatewayUsername = SmsGatewayUsername,
-            GatewayPassword = SecureStringToString(_gatewayPassword) ?? string.Empty
+            GatewayPassword = SecureStringToString(_gatewayPassword) ?? string.Empty,
+            TokenPackages = _tokenPackages
         };
 
         string json = JsonSerializer.Serialize(data);
@@ -69,6 +76,7 @@ public class SecurityVault : IDisposable
                 _whSigningKey = StringToSecureString(data.WhSigningKey);
                 SmsGatewayUsername = data.GatewayUsername ?? string.Empty;
                 _gatewayPassword = StringToSecureString(data.GatewayPassword);
+                _tokenPackages = data.TokenPackages;
             }
 
             _loaded = true;
@@ -97,6 +105,39 @@ public class SecurityVault : IDisposable
         _aesPassphrase = StringToSecureString(passphrase.Trim());
     }
 
+    public void UpdatePackageInList(TokenPackage package)
+    {
+        var packageInList = _tokenPackages.SingleOrDefault(p => p.Email == package.Email);
+
+        if (packageInList == null) return; 
+
+        packageInList.AccessToken = package.AccessToken;
+        packageInList.AccessTokenExpiration = package.AccessTokenExpiration;
+        packageInList.RefreshToken = package.RefreshToken;
+
+        Console.WriteLine("Updated TokenPackage!");
+    }
+
+    public void UpdatePackageInListViaRefreshTokenResult(string email, RefreshTokenResult result)
+    {
+        var package = new TokenPackage();
+
+        package.Email = email;
+        package.AccessToken = result.AccessToken;
+        package.AccessTokenExpiration = result.AccessTokenExpiration;
+        package.RefreshToken = result.RefreshToken;
+
+        UpdatePackageInList(package);
+    }
+
+    public void AddPackageToList(TokenPackage package)
+    {
+        if(_tokenPackages.Any(item => item.Email == package.Email)) return;
+
+        _tokenPackages.Add(package);
+        Console.WriteLine("New entry into TokenPackage-list!");
+    }
+
     public SecureStringAccessor? GetAesPassphrase() 
     {
         if (_aesPassphrase == null)
@@ -121,16 +162,9 @@ public class SecurityVault : IDisposable
         return new(_whSigningKey);
     }
 
-    // ── DTO for Serialization ──────────────────────────────────────────────────
-    
-    private class VaultDataDto
+    public TokenPackage? GetPackageForEmail(string email)
     {
-        public string? AesPassphrase { get; set; }
-        public string? WhSigningKey { get; set; }
-        public string? GatewayUsername { get; set; }
-        public string? GatewayPassword { get; set; }
-        public string? Email { get; set; }
-        public string? EmailPassword { get; set; }
+        return _tokenPackages.SingleOrDefault(item => item.Email == email);
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────

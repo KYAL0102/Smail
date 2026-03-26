@@ -4,6 +4,7 @@ using Core.Models.ApiResponseClasses;
 using Core.Models.EmailAuthentication;
 using DocumentFormat.OpenXml;
 using Duende.IdentityModel.OidcClient;
+using Duende.IdentityModel.OidcClient.Results;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Services;
@@ -16,14 +17,12 @@ namespace Core.Services;
 
 public class EmailService
 {
-    private LoginResult _tokens;
-    private Provider _emailProvider;
-    public string Email { get; init; }
+    public TokenPackage TokenPackage { get; private set; }
+    private readonly Provider _emailProvider;
 
-    public EmailService(string email, LoginResult result, Provider provider)
+    public EmailService(TokenPackage package, Provider provider)
     {
-        Email = email;
-        _tokens = result;
+        TokenPackage = package;
         _emailProvider = provider;
     }
 
@@ -32,16 +31,15 @@ public class EmailService
     
     public List<Task<ContactSendStatus>> SendMessageToEmails(string message, string subject, List<Core.Models.Contact> contacts)
     {
-        if (_tokens == null) throw new ArgumentException("No tokens.");
-
-        var fromGoogleEmail = !string.IsNullOrEmpty(Email) ? Email : "me@gmail.com";
+        var email = TokenPackage.Email;
+        var fromGoogleEmail = !string.IsNullOrEmpty(email) ? email : "me@gmail.com";
 
         return contacts.Select(contact => ExecuteSendTask(contact, () => 
         {
             return _emailProvider.Name switch
             {
-                "Google" => SendGmailAsync(_tokens.AccessToken, fromGoogleEmail, contact.Email, subject, message),
-                "Microsoft" => SendOutlookAsync(_tokens.AccessToken, contact.Email, subject, message),
+                "Google" => SendGmailAsync(TokenPackage.AccessToken, fromGoogleEmail, contact.Email, subject, message),
+                "Microsoft" => SendOutlookAsync(TokenPackage.AccessToken, contact.Email, subject, message),
                 _ => throw new NotSupportedException($"Provider {_emailProvider.Name} not supported")
             };
         })).ToList();
