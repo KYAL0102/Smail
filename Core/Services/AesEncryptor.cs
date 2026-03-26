@@ -81,9 +81,9 @@ public class AesEncryptor
         return Encoding.UTF8.GetString(decryptedBytes);
     }
 
-    private static byte[] GenerateSalt()
+    private static byte[] GenerateSalt(int size = 16)
     {
-        return RandomNumberGenerator.GetBytes(16);
+        return RandomNumberGenerator.GetBytes(size);
     }
 
     private byte[] GenerateKeySMS(byte[] salt, int iterations)
@@ -107,35 +107,36 @@ public class AesEncryptor
         return dict;
     }
 
+    private const int SALT_SIZE = 16;
+    private const int NONCE_SIZE = 12;
+
     /// <summary>
     /// Encrypts a string using AES-GCM.
     /// </summary>
     /// <param name="plainText">The data to encrypt (e.g., your JSON string).</param>
-    /// <param name="key">A 32-byte (256-bit) key.</param>
-    public static string Encrypt(string plainText, byte[] key)
+    /// <param name="password">The Encrypion password</param>
+    public static string Encrypt(string plainText, string password)
     {
-        if (key.Length != 32) throw new ArgumentException("Key must be 256 bits (32 bytes).");
+        byte[] salt = GenerateSalt(SALT_SIZE);
+
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA256, 32);
 
         byte[] inputBytes = Encoding.UTF8.GetBytes(plainText);
         
-        // 1. Generate a random Nonce (IV)
-        byte[] nonce = new byte[NonceBitSize / 8];
+        byte[] nonce = new byte[NONCE_SIZE]; 
         new SecureRandom().NextBytes(nonce);
 
-        // 2. Setup GCM engine
         GcmBlockCipher cipher = new (new AesEngine());
-        AeadParameters parameters = new (new KeyParameter(key), MacBitSize, nonce);
+        AeadParameters parameters = new (new KeyParameter(key), 128, nonce);
         cipher.Init(true, parameters);
-
-        // 3. Process Encryption
         byte[] outputBytes = new byte[cipher.GetOutputSize(inputBytes.Length)];
-        int length = cipher.ProcessBytes(inputBytes, 0, inputBytes.Length, outputBytes, 0);
-        cipher.DoFinal(outputBytes, length);
+        int len = cipher.ProcessBytes(inputBytes, 0, inputBytes.Length, outputBytes, 0);
+        cipher.DoFinal(outputBytes, len);
 
-        // 4. Combine Nonce + CipherText for storage
-        byte[] combined = new byte[nonce.Length + outputBytes.Length];
-        Buffer.BlockCopy(nonce, 0, combined, 0, nonce.Length);
-        Buffer.BlockCopy(outputBytes, 0, combined, nonce.Length, outputBytes.Length);
+        byte[] combined = new byte[salt.Length + nonce.Length + outputBytes.Length];
+        Buffer.BlockCopy(salt, 0, combined, 0, salt.Length);
+        Buffer.BlockCopy(nonce, 0, combined, salt.Length, nonce.Length);
+        Buffer.BlockCopy(outputBytes, 0, combined, salt.Length + nonce.Length, outputBytes.Length);
 
         return Convert.ToBase64String(combined);
     }
@@ -143,37 +144,47 @@ public class AesEncryptor
     /// <summary>
     /// Decrypts a Base64 string using AES-GCM.
     /// </summary>
-    public static string Decrypt(string cipherTextWithNonce, byte[] key)
+    public static string? Decrypt(string cipherTextWithMetadata, string password)
     {
-        byte[] combined = Convert.FromBase64String(cipherTextWithNonce);
+        byte[] combined = Convert.FromBase64String(cipherTextWithMetadata);
 
-        // 1. Extract Nonce
-        int nonceSize = NonceBitSize / 8;
-        byte[] nonce = new byte[nonceSize];
-        byte[] cipherText = new byte[combined.Length - nonceSize];
-        
-        Buffer.BlockCopy(combined, 0, nonce, 0, nonceSize);
-        Buffer.BlockCopy(combined, nonceSize, cipherText, 0, cipherText.Length);
+        byte[] salt = new byte[SALT_SIZE];
+        Buffer.BlockCopy(combined, 0, salt, 0, SALT_SIZE);
 
-        // 2. Setup GCM engine
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA256, 32);
+
+        byte[] nonce = new byte[NONCE_SIZE];
+        Buffer.BlockCopy(combined, SALT_SIZE, nonce, 0, NONCE_SIZE);
+
+        int cipherTextOffset = SALT_SIZE + NONCE_SIZE;
+        byte[] cipherText = new byte[combined.Length - cipherTextOffset];
+        Buffer.BlockCopy(combined, cipherTextOffset, cipherText, 0, cipherText.Length);
+
         GcmBlockCipher cipher = new (new AesEngine());
-        AeadParameters parameters = new (new KeyParameter(key), MacBitSize, nonce);
+        AeadParameters parameters = new (new KeyParameter(key), 128, nonce);
         cipher.Init(false, parameters);
-
-        // 3. Process Decryption
         byte[] outputBytes = new byte[cipher.GetOutputSize(cipherText.Length)];
-        int length = cipher.ProcessBytes(cipherText, 0, cipherText.Length, outputBytes, 0);
+        int len = cipher.ProcessBytes(cipherText, 0, cipherText.Length, outputBytes, 0);
         
-        try
-        {
-            cipher.DoFinal(outputBytes, length);
+        try {
+            cipher.DoFinal(outputBytes, len);
+            return Encoding.UTF8.GetString(outputBytes);
+        } catch {
+            return null;
         }
-        catch (InvalidCipherTextException)
-        {
-            // This happens if the data was tampered with or the key is wrong
-            return null; 
-        }
+    }
 
-        return Encoding.UTF8.GetString(outputBytes).TrimEnd('\0');
+    public static byte[] DeriveKeyFromPassword(string password)
+    {
+        byte[] salt = Encoding.UTF8.GetBytes("peopletosillystuff");
+        
+        // 600,000 iterations is the current OWASP recommendation for SHA-256
+        return Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt, 
+            600000, 
+            HashAlgorithmName.SHA256,
+            32
+        );
     }
 }

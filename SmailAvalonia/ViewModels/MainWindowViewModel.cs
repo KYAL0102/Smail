@@ -86,7 +86,6 @@ public partial class MainWindowViewModel : ViewModelBase
         
         if (sessionResult == null)
         {
-            Console.WriteLine("User clicked X or cancelled. Creating default session.");
             sessionResult = new Session(); 
         }
 
@@ -132,13 +131,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void NavigateToRecepientsConfiguration()
     {
-        Console.WriteLine("Navigating to recepient configuration...");
         if (CurrentSession != null) CurrentPage = new RecepientConfiguration(CurrentSession);
     }
 
     private void NavigateToPayloadConfiguration()
     {
-        Console.WriteLine("Navigating to text-configuration...");
         if (CurrentSession != null ) CurrentPage = new MessageConfigurationControl(CurrentSession);
     }
     

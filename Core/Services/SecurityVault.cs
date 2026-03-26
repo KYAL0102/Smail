@@ -18,24 +18,23 @@ public class SecurityVault : IDisposable
     private SecureString? _aesPassphrase;
     private SecureString? _whSigningKey;
     private SecureString? _gatewayPassword;
-    private readonly byte[]? _key = null;
+    private readonly string? _pwd = null;
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
 
     // EMAIL
     private List<TokenPackage> _tokenPackages = [];
 
-    public SecurityVault(string? key = null)
+    public SecurityVault(string? password = null)
     {
-        if (!string.IsNullOrEmpty(key)) 
-            _key = SHA256.HashData(Encoding.UTF8.GetBytes(key));
+        _pwd = password;
     }
 
     // ── Persistence Logic ──────────────────────────────────────────────────────
 
     public async Task SaveToFileAsync()
     {
-        if (_key == null) return;
+        if (_pwd == null) return;
 
         var data = new VaultDataDto
         {
@@ -47,14 +46,14 @@ public class SecurityVault : IDisposable
         };
 
         string json = JsonSerializer.Serialize(data);
-        string encrypted = AesEncryptor.Encrypt(json, _key);
+        string encrypted = AesEncryptor.Encrypt(json, _pwd);
         var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), FileName);
         await File.WriteAllTextAsync(path, encrypted);
     }
 
     public async Task LoadAsync()
     {
-        if (_key == null || _loaded) return;
+        if (_pwd == null || _loaded) return;
         //if (_aesPassphrase != null || _gatewayPassword != null) return;
 
         var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), FileName);
@@ -65,7 +64,7 @@ public class SecurityVault : IDisposable
         try
         {
             string encrypted = await File.ReadAllTextAsync(filePath);
-            string? json = AesEncryptor.Decrypt(encrypted, _key);
+            string? json = AesEncryptor.Decrypt(encrypted, _pwd);
             
             if (string.IsNullOrEmpty(json)) throw new Exception("Decryption failed or data corrupted.");
 
