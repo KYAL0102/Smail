@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SmailAvalonia.Views.EmailInput"
              xmlns:vm="using:SmailAvalonia.ViewModels"
@@ -19,7 +20,13 @@
     </Grid.ColumnDefinitions>
 
     <Label Grid.Row="0" Grid.Column="0" Content="Email:"/>
-    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Email, Mode=TwoWay}" IsEnabled="{Binding IsEmailboxEditable}"/>
+    <AutoCompleteBox 
+      Grid.Row="0" 
+      Grid.Column="1"
+      Text="{Binding Email, Mode=TwoWay}"
+      ItemsSource="{Binding EmailSuggestions}"
+      FilterMode="Contains"
+      IsEnabled="{Binding IsEmailboxEditable}"/>
 
     <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap" IsVisible="{Binding ManualUrlInputVisible}"
           Text="If the browser page says 'Connection refused', copy the URL. "/>

@@ -7,6 +7,7 @@ using Core.Services;
 using Duende.IdentityModel.OidcClient;
 using SmailAvalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.ObjectModel;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -82,17 +83,22 @@ public class EmailInputViewModel : ViewModelBase
         }
     }
 
+    public ObservableCollection<string> EmailSuggestions { get; init; } = [];
+
     public EmailInputViewModel(Session? session = null) 
     {
         _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _providerService = App.ServiceProvider.GetRequiredService<EmailProviderService>();
         _session = session;
         Reset();
+
+        _securityVault.GetUsedEmails()
+            .ForEach(EmailSuggestions.Add);
     }
 
     public async Task InitializeDataAsync()
     {
-
+        await Task.CompletedTask;
     }
 
     public void ConfirmManual()

@@ -166,6 +166,11 @@ public class SecurityVault : IDisposable
         return _tokenPackages.SingleOrDefault(item => item.Email == email);
     }
 
+    public List<string> GetUsedEmails()
+    {
+        return [.._tokenPackages.Select(p => p.Email)];
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────────
 
     public static SecureString? StringToSecureString(string? value)
