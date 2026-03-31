@@ -12,10 +12,10 @@ namespace SmailAvalonia.Views;
 public partial class SmsGatewayInput : UserControl
 {
     private SmsGatewayInputViewModel _viewModel;
-    public SmsGatewayInput(bool settingMode, Session? session = null)
+    public SmsGatewayInput(bool settingMode, bool nativeButtonsVisible = true, Session? session = null)
     {
         InitializeComponent();
-        _viewModel = new(settingMode, session);
+        _viewModel = new(settingMode, nativeButtonsVisible, session);
         DataContext = _viewModel;
         Loaded += UserControl_Loaded;
     }

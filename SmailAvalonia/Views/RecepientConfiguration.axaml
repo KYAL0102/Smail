@@ -22,9 +22,8 @@
 
     <Label Grid.Row="0" Grid.Column="0" Content="Recipients:"/>
     <UniformGrid Grid.Row="1" Grid.Column="0" Columns="2">
-      <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-        <Button Content="Upload multiple Contacts" Command="{Binding PickFileForImport}"/>
-        <Label Content="FileName.csv" VerticalAlignment="Center"/>
+      <StackPanel Orientation="Vertical" VerticalAlignment="Top">
+        <Button Content="Upload from file" Command="{Binding PickFileForImport}"/>
       </StackPanel>
       <Grid>
         <Grid.ColumnDefinitions>

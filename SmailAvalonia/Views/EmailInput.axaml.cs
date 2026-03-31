@@ -11,10 +11,10 @@ namespace SmailAvalonia.Views;
 public partial class EmailInput : UserControl
 {
     public EmailInputViewModel _viewModel;
-    public EmailInput(Session? session = null)
+    public EmailInput(bool nativeButtonsVisible, Session? session = null)
     {
         InitializeComponent();
-        _viewModel = new(session);
+        _viewModel = new(nativeButtonsVisible, session);
         DataContext = _viewModel;
         
         Loaded += UserControl_Loaded;

@@ -19,6 +19,10 @@
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
+    <Grid.KeyBindings>
+      <KeyBinding Command="{Binding ApplyEmailCommand}" Gesture="Enter"/>
+    </Grid.KeyBindings>
+
     <Label Grid.Row="0" Grid.Column="0" Content="Email:"/>
     <AutoCompleteBox 
       Grid.Row="0" 
@@ -37,5 +41,11 @@
     <SelectableTextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" 
                         HorizontalAlignment="Right" Foreground="Red"
                         Text="{Binding ErrorMessage}"/>
+    
+    <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" IsVisible="{Binding NativeButtonsVisible}">
+      <Button Content="Edit" Command="{Binding EditEmailCommand}"/>
+      <Button Content="Cancel" Command="{Binding CancelEmailEditingCommand}"/>
+      <Button Content="Apply" Command="{Binding ApplyEmailCommand}"/>
+    </StackPanel>
   </Grid>
 </UserControl>

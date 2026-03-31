@@ -130,15 +130,47 @@ public class SmsGatewayInputViewModel : ViewModelBase
         }
     }
 
+    private bool _canApply = true;
+    public bool CanApply 
+    {
+        get => _canApply;
+        set
+        {
+            _canApply = value;
+            OnPropertyChanged();
+            SaveDataCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool _nativeBtnsVisible = true;
+    public bool NativeButtonsVisible
+    {
+        get => _nativeBtnsVisible;
+        set
+        {
+            _nativeBtnsVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
     public RelayCommand ShowCredentialInput { get; set; }
+    public RelayCommand ResetDataCommand { get; set; }
+    public RelayCommand SaveDataCommand { get; set; }
     
-    public SmsGatewayInputViewModel(bool settingMode, Session? session = null)
+    public SmsGatewayInputViewModel(bool settingMode, bool nativeButtonsVisible, Session? session = null)
     {
         _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         SettingModeEnabled = settingMode;
+        NativeButtonsVisible = nativeButtonsVisible;
         _session = session;
 
         ShowCredentialInput = new(ChangeLeftOverCredentialVisibility);
+        ResetDataCommand = new(ResetData);
+        SaveDataCommand = new
+        (
+            async () => await ApplySmsChangesAsync(),
+            () => CanApply && nativeButtonsVisible
+        );
     }
 
     public async Task InitializeDataAsync()
@@ -146,6 +178,8 @@ public class SmsGatewayInputViewModel : ViewModelBase
         try
         {
             await _securityVault.LoadAsync();
+            var whKey = _securityVault.GetWhSigningKey();
+            if(string.IsNullOrEmpty(whKey?.Value ?? null)) throw new Exception("Saved sms credentials are not valid. Need to be set...");
         }
         catch (Exception ex)
         {
@@ -255,6 +289,33 @@ public class SmsGatewayInputViewModel : ViewModelBase
         _tasks.Add(Task.Run(smsService.RegisterWebhooks));
 
         return smsService;
+    }
+
+    private async Task ApplySmsChangesAsync()
+    {
+        CanApply = false;
+
+        var tasks = new List<Task>();
+
+        if(_session != null && _session.SmsService != null) tasks.Add(ConfirmParameterChangeAsync());
+        else if(_session != null)
+        {
+            var smsService = await CreateSmsServiceAsync();
+
+            await Task.Delay(100);
+            Dispatcher.UIThread.Post(() => 
+            {
+                _session.SmsService = smsService;
+            });
+
+            await AwaitAllTasksAsync();
+        }
+        else Console.WriteLine($"Session is null here. (ApplySmsChangesAsync)");
+
+        await _securityVault.SaveToFileAsync();
+        await Task.WhenAll(tasks);
+
+        CanApply = true;
     }
 
     public async Task AwaitAllTasksAsync() => await Task.WhenAll(_tasks);

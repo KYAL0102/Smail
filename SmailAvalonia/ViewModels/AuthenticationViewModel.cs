@@ -13,7 +13,7 @@ public class AuthenticationViewModel : ViewModelBase
 {
     private readonly Window? _window = null;
 
-    private UserControl _currentControl = new SmsGatewayInput(false);
+    private UserControl _currentControl = new SmsGatewayInput(false, false);
     public UserControl CurrentControl 
     { 
         get => _currentControl;
@@ -97,7 +97,7 @@ public class AuthenticationViewModel : ViewModelBase
 
     private void Skip()
     {
-        if(CurrentControl is SmsGatewayInput) CurrentControl = new EmailInput();
+        if(CurrentControl is SmsGatewayInput) CurrentControl = new EmailInput(false);
         else if(CurrentControl is EmailInput) _window?.Close(_sessionInMaking);
     }
 
@@ -110,7 +110,7 @@ public class AuthenticationViewModel : ViewModelBase
             _sessionInMaking.SmsService = smsService;
 
             await smsInput.AwaitAllTasksAsync();
-            CurrentControl = new EmailInput();
+            CurrentControl = new EmailInput(false);
         }
 
         CanApply = true;
@@ -135,8 +135,9 @@ public class AuthenticationViewModel : ViewModelBase
                 Console.WriteLine($"task was faulted? {loginTask.IsFaulted}");
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
             ResetInput();
             return false;
         }

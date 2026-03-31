@@ -131,7 +131,11 @@ public class SecurityVault : IDisposable
 
     public void AddPackageToList(TokenPackage package)
     {
-        if(_tokenPackages.Any(item => item.Email == package.Email)) return;
+        if(_tokenPackages.Any(item => item.Email == package.Email))
+        {
+            UpdatePackageInList(package);
+            return;
+        }
 
         _tokenPackages.Add(package);
         Console.WriteLine("New entry into TokenPackage-list!");

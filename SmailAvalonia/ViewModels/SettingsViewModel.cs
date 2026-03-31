@@ -36,45 +36,6 @@ public class SettingsViewModel : ViewModelBase
         }
     }*/
 
-    private bool _canApply_smsSettings = true;
-    public bool CanApply_SmsSettings 
-    {
-        get => _canApply_smsSettings;
-        set
-        {
-            _canApply_smsSettings = value;
-            OnPropertyChanged();
-            SaveDataCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private bool _editingEmail = false;
-    public bool EditingEmail 
-    {
-        get => _editingEmail;
-        set
-        {
-            _editingEmail = value;
-            OnPropertyChanged();
-            ApplyEmailCommand.NotifyCanExecuteChanged();
-            CancelEmailEditingCommand.NotifyCanExecuteChanged();
-            EditEmailCommand.NotifyCanExecuteChanged();
-        }
-    }
-
-    private bool _newEmailIsProcessing = false;
-    public bool IsManualProcessing
-    {
-        get => _newEmailIsProcessing;
-        set
-        {
-            _newEmailIsProcessing = value;
-            OnPropertyChanged();
-            ApplyEmailCommand.NotifyCanExecuteChanged();
-            CancelEmailEditingCommand.NotifyCanExecuteChanged();
-        }
-    }
-
     private bool _updateBtnLocked = false;
     public bool UpdateBtnLocked
     {
@@ -141,13 +102,6 @@ public class SettingsViewModel : ViewModelBase
     }
 
     private UpdateInfo? _updateInfo = null;
-
-    public RelayCommand ResetDataCommand { get; set; }
-    public RelayCommand SaveDataCommand { get; set; }
-
-    public RelayCommand EditEmailCommand { get; set; }
-    public RelayCommand CancelEmailEditingCommand { get; set; }
-    public RelayCommand ApplyEmailCommand { get; set; }
     public RelayCommand UpdateCommand { get; set; }
 
     public SettingsViewModel(Session session, Window? window)
@@ -156,32 +110,11 @@ public class SettingsViewModel : ViewModelBase
         _session = session;
         _window = window;
 
-        SmsInput = new(true, _session);
-        EmailInput = new(_session);
+        SmsInput = new(true, true, _session);
+        EmailInput = new(true, _session);
 
         CurrentVersion = UpdateChecker.GetCurrentVersion();
 
-        ResetDataCommand = new(ResetData);
-        SaveDataCommand = new
-        (
-            async () => await ApplySmsChangesAsync(),
-            () => CanApply_SmsSettings
-        );
-        EditEmailCommand = new
-        (
-            EnableEmailEditing,
-            () => !EditingEmail
-        );
-        CancelEmailEditingCommand = new
-        (
-            ResetEmailInput,
-            () => EditingEmail && !IsManualProcessing
-        );
-        ApplyEmailCommand = new
-        (
-            async () => await ApplyEmailAsync(),
-            () => EditingEmail && !IsManualProcessing
-        );
         UpdateCommand = new
         (
             async() => await CheckForUpdatesAsync(),
@@ -232,102 +165,8 @@ public class SettingsViewModel : ViewModelBase
         UpdateBtnLocked = false;
     }
 
-    private void EnableEmailEditing()
-    {
-        EditingEmail = true;
-        EmailInput?.ChangeEmailTextBoxMode(true);
-    }
-
-    private void ResetEmailInput()
-    {
-        EditingEmail = false;
-        IsManualProcessing = false;
-        loginTask = null;
-        EmailInput?.Reset();
-        //EmailInput?.ChangeEmailTextBoxMode(false); //Not necessary, because the Contentcontrol covers the setback
-    }
-
-    private async Task ApplyEmailAsync()
-    {
-        try 
-        {
-            var success = await ApplyEmailInput(EmailInput);
-            if (success)
-            {
-                ResetEmailInput();
-            }
-        }
-        finally 
-        {
-            // Centralized state cleanup
-            EditingEmail = false;
-            IsManualProcessing = false;
-        }
-    }
-
-    private Task<EmailService>? loginTask = null;
-    private async Task<bool> ApplyEmailInput(EmailInput emailInput)
-    {
-        try 
-        {
-            if (loginTask == null || loginTask.IsCompleted)
-            {
-                loginTask = emailInput.ConfirmLoginAsync();
-            }
-            else
-            {
-                IsManualProcessing = true;
-                emailInput.ConfirmManual(); 
-            }
-
-            _session.EmailService = await loginTask;
-            return true;
-        }
-        catch (Exception)
-        {
-            IsManualProcessing = false;
-            return false;
-        }
-        finally 
-        {
-            // Ensures the next attempt starts fresh
-            loginTask = null; 
-        }
-    }
-
     public async Task OnUnloadAsync()
     {
         if(SmsInput != null) await SmsInput.AwaitAllTasksAsync();
-    }
-
-    private void ResetData()
-    {
-        SmsInput?.ResetData();
-    }
-
-    private async Task ApplySmsChangesAsync()
-    {
-        CanApply_SmsSettings = false;
-
-        var tasks = new List<Task>();
-
-        if(SmsInput != null && _session.SmsService != null) tasks.Add(SmsInput.ConfirmParameterChangesAsync());
-        else if (SmsInput != null)
-        {
-            var smsService = await SmsInput.CreateSmsServiceAsync();
-
-            await Task.Delay(100);
-            Dispatcher.UIThread.Post(() => 
-            {
-                _session.SmsService = smsService;
-            });
-
-            await SmsInput.AwaitAllTasksAsync();
-        }
-
-        await _securityVault.SaveToFileAsync();
-        await Task.WhenAll(tasks);
-
-        CanApply_SmsSettings = true;
     }
 }

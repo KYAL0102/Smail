@@ -8,10 +8,13 @@
              x:DataType="vm:SettingsViewModel">
   <TabControl>
     <TabItem Header="SMS-Gateway">
+      <ContentControl Content="{Binding SmsInput}"/>
+    </TabItem>
+    <TabItem Header="Email">
+      <ContentControl Content="{Binding EmailInput}"/>
+    </TabItem>
+    <TabItem Header="Syncing">
       <Grid>
-        <Grid.KeyBindings>
-          <KeyBinding Command="{Binding SaveDataCommand}" Gesture="Enter"/>
-        </Grid.KeyBindings>
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
@@ -22,30 +25,9 @@
           <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!--Sms Gateway Credentials-->
-        <ContentControl Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="{Binding SmsInput}"/>
-        
-        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal">
-          <Button Content="Reset" HorizontalAlignment="Right" 
-                Command="{Binding ResetDataCommand}"/>
-        
-          <Button Content="Apply" HorizontalAlignment="Right" 
-                  Command="{Binding SaveDataCommand}"/>
-        </StackPanel>
+        <Button Grid.Row="0" Grid.Column="0" Content="Set source"/>
+        <TextBox Grid.Row="0" Grid.Column="1"/>
       </Grid>
-    </TabItem>
-    <TabItem Header="Email">
-      <StackPanel Orientation="Vertical">
-        <StackPanel.KeyBindings>
-          <KeyBinding Command="{Binding ApplyEmailCommand}" Gesture="Enter"/>
-        </StackPanel.KeyBindings>
-        <ContentControl Content="{Binding EmailInput}"/>
-        <StackPanel Orientation="Horizontal">
-          <Button Content="Edit" Command="{Binding EditEmailCommand}"/>
-          <Button Content="Cancel" Command="{Binding CancelEmailEditingCommand}"/>
-          <Button Content="Apply" Command="{Binding ApplyEmailCommand}"/>
-        </StackPanel>
-      </StackPanel>
     </TabItem>
     <TabItem Header="Updates">
       <Grid>

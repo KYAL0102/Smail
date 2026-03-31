@@ -83,13 +83,73 @@ public class EmailInputViewModel : ViewModelBase
         }
     }
 
+    private bool _editingEmail = false;
+    public bool EditingEmail 
+    {
+        get => _editingEmail;
+        set
+        {
+            _editingEmail = value;
+            OnPropertyChanged();
+            ApplyEmailCommand.NotifyCanExecuteChanged();
+            CancelEmailEditingCommand.NotifyCanExecuteChanged();
+            EditEmailCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool _canApply = false;
+    public bool CanApply
+    {
+        get => _canApply;
+        set
+        {
+            _canApply = value;
+            OnPropertyChanged();
+            ApplyEmailCommand.NotifyCanExecuteChanged();
+            CancelEmailEditingCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool _nativeBtnsVisible = true;
+    public bool NativeButtonsVisible
+    {
+        get => _nativeBtnsVisible;
+        set
+        {
+            _nativeBtnsVisible = value;
+            OnPropertyChanged();
+        }
+    }
+
     public ObservableCollection<string> EmailSuggestions { get; init; } = [];
 
-    public EmailInputViewModel(Session? session = null) 
+    public RelayCommand EditEmailCommand { get; set; }
+    public RelayCommand CancelEmailEditingCommand { get; set; }
+    public RelayCommand ApplyEmailCommand { get; set; }
+
+    public EmailInputViewModel(bool nativeButtonsVisible, Session? session = null) 
     {
         _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _providerService = App.ServiceProvider.GetRequiredService<EmailProviderService>();
+        NativeButtonsVisible = nativeButtonsVisible;
         _session = session;
+
+        EditEmailCommand = new
+        (
+            EnableEmailEditing,
+            () => !EditingEmail
+        );
+        CancelEmailEditingCommand = new
+        (
+            ResetEmailInput,
+            () => EditingEmail && CanApply
+        );
+        ApplyEmailCommand = new
+        (
+            async () => await ApplyEmailAsync(),
+            () => EditingEmail && CanApply && nativeButtonsVisible
+        );
+
         Reset();
 
         _securityVault.GetUsedEmails()
@@ -128,16 +188,23 @@ public class EmailInputViewModel : ViewModelBase
         {
             if(tokenPackage.AccessTokenExpiration < DateTimeOffset.UtcNow)
             {
-                var result = await WebAuthenticationService.RefreshPackageAsync(provider, tokenPackage.RefreshToken);
-
-                if(!result.IsError)
+                try
                 {
-                    Console.WriteLine("Email-Accesstoken successfully renewed!");
-                    _securityVault.UpdatePackageInListViaRefreshTokenResult(Email, result);
-                    await _securityVault.SaveToFileAsync();
-                    return new EmailService(tokenPackage, provider);
+                    var result = await WebAuthenticationService.RefreshPackageAsync(provider, tokenPackage.RefreshToken);
+
+                    if(!result.IsError)
+                    {
+                        Console.WriteLine("Email-Accesstoken successfully renewed!");
+                        _securityVault.UpdatePackageInListViaRefreshTokenResult(Email, result);
+                        await _securityVault.SaveToFileAsync();
+                        return new EmailService(tokenPackage, provider);
+                    }
+                    else Console.WriteLine($"Failed to renew accesstoken -> {result.ErrorDescription}");
                 }
-                else Console.WriteLine($"Failed to renew accesstoken -> {result.ErrorDescription}");
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Failed to renew accesstoken -> {ex.Message} - {ex.StackTrace}");
+                }
             }
             else
             {
@@ -179,6 +246,7 @@ public class EmailInputViewModel : ViewModelBase
 
     private async Task<LoginResult> LoginViaOAuth(Provider provider)
     {
+        CanApply = true;
         IsEmailboxEditable = false;
         ManualUrlInputVisible = true;
         IsManualUrlInputEditable = true;
@@ -196,6 +264,70 @@ public class EmailInputViewModel : ViewModelBase
 
             Console.WriteLine($"Login failed: {ex.Message} - {ex.StackTrace}");
             throw;
+        }
+    }
+
+    private void EnableEmailEditing()
+    {
+        EditingEmail = true;
+        CanApply = true;
+        IsEmailboxEditable = true;
+    }
+
+    private void ResetEmailInput()
+    {
+        EditingEmail = false;
+        CanApply = false;
+        loginTask = null;
+        Reset();
+        //EmailInput?.ChangeEmailTextBoxMode(false); //Not necessary, because the Contentcontrol covers the setback
+    }
+
+    private async Task ApplyEmailAsync()
+    {
+        try 
+        {
+            var success = await ApplyEmailInput();
+            if (success)
+            {
+                ResetEmailInput();
+            }
+        }
+        finally 
+        {
+            // Centralized state cleanup
+            EditingEmail = false;
+            CanApply = false;
+        }
+    }
+
+    private Task<EmailService>? loginTask = null;
+    private async Task<bool> ApplyEmailInput()
+    {
+        try 
+        {
+            CanApply = false;
+            if (loginTask == null || loginTask.IsCompleted)
+            {
+                loginTask = ConfirmLoginAsync();
+            }
+            else
+            {
+                ConfirmManual(); 
+            }
+
+            _session.EmailService = await loginTask;
+            return true;
+        }
+        catch (Exception)
+        {
+            CanApply = false;
+            return false;
+        }
+        finally 
+        {
+            // Ensures the next attempt starts fresh
+            loginTask = null; 
         }
     }
 }
