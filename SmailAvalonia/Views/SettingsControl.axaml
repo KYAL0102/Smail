@@ -13,21 +13,8 @@
     <TabItem Header="Email">
       <ContentControl Content="{Binding EmailInput}"/>
     </TabItem>
-    <TabItem Header="Syncing">
-      <Grid>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <Button Grid.Row="0" Grid.Column="0" Content="Set source"/>
-        <TextBox Grid.Row="0" Grid.Column="1"/>
-      </Grid>
+    <TabItem Header="Data">
+      <ContentControl Content="{Binding DataSettingsInput}"/>
     </TabItem>
     <TabItem Header="Updates">
       <Grid>

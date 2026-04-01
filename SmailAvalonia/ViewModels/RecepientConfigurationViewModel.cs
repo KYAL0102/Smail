@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
@@ -13,7 +15,7 @@ using SmailAvalonia.Views;
 
 namespace SmailAvalonia.ViewModels;
 
-public class RecepientConfigurationViewModel: ViewModelBase
+public partial class RecepientConfigurationViewModel: ViewModelBase
 {
     private Session _session;
     private RecepientConfiguration _userControl;
@@ -37,14 +39,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
             NextBatchCommand.NotifyCanExecuteChanged();
         }
     }
-    public ObservableCollection<Contact> Contacts { get; } = [];
-    public RelayCommand PreviousBatchCommand { get; init; }
-    public RelayCommand NextBatchCommand { get; init; }
-    public RelayCommand AddSingleContactCommand { get; init; }
-    public RelayCommand<Contact> RemoveContactCommand { get; init; }
-    public RelayCommand PickFileForImport { get; init; }
-    public RelayCommand ContinueToMessageConfig { get; init; }
-    public RelayCommand OneStepBack { get; init; }
+
     private string _newContactName = string.Empty;
     public string NewContactName
     {
@@ -77,10 +72,27 @@ public class RecepientConfigurationViewModel: ViewModelBase
             OnPropertyChanged();
         }
     }
+
+    public ObservableCollection<Contact> Contacts { get; } = [];
+    [ObservableProperty] private bool _isNameVisible = false;
+    [ObservableProperty] private bool _isMobileVisible = false;
+    [ObservableProperty] private bool _isEmailVisible = false;
+    [ObservableProperty] private bool _isRegionVisible = false;
+    [ObservableProperty] private bool _isPreferenceVisible = false;
+
+    public RelayCommand PreviousBatchCommand { get; init; }
+    public RelayCommand NextBatchCommand { get; init; }
+    public RelayCommand AddSingleContactCommand { get; init; }
+    public RelayCommand<Contact> RemoveContactCommand { get; init; }
+    public RelayCommand PickFileForImport { get; init; }
+    public RelayCommand ContinueToMessageConfig { get; init; }
+    public RelayCommand OneStepBack { get; init; }
+
     public RecepientConfigurationViewModel(RecepientConfiguration userControl, Session session)
     {
         _userControl = userControl;
         _session = session;
+
         PreviousBatchCommand = new(
             PrevPage,
             () => CurrentStartIndex > 0
@@ -160,6 +172,13 @@ public class RecepientConfigurationViewModel: ViewModelBase
 
     private void AddSingleNewContactToList()
     {
+        if(!FormatChecker.IsValidMobile(NewContactMobileNumber) ||
+            !FormatChecker.IsValidEmail(NewContactEmail))
+        {
+            //TODO: Pop-up telling the user the error
+            return;
+        }
+        
         var newContact = new Contact
         {
             Name = NewContactName,
@@ -170,6 +189,7 @@ public class RecepientConfigurationViewModel: ViewModelBase
         AllContacts.Add(newContact);
         ResetSingleContactInputFields();
         SetLastBatchAsCurrent();
+        CheckColumnVisibility();
     }
 
     private void ResetSingleContactInputFields()
@@ -184,53 +204,73 @@ public class RecepientConfigurationViewModel: ViewModelBase
         if (contact == null) return;
 
         AllContacts.Remove(contact);
+        CheckColumnVisibility();
         SetLastBatchAsCurrent(); //TODO: Stay on current batch
     }
 
     public async Task PickFileAsync()
     {
-        var topLevel = TopLevel.GetTopLevel(_userControl);
-
-        // Start async operation to open the dialog.
-        var files = await topLevel!.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        try
         {
-            Title = "Open Csv or Excel File",
-            AllowMultiple = false,
-            FileTypeFilter = new List<FilePickerFileType>
+            var topLevel = TopLevel.GetTopLevel(_userControl);
+
+            // Start async operation to open the dialog.
+            var files = await topLevel!.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                new("CSV and Excel Files")
+                Title = "Open Csv or Excel File",
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType>
                 {
-                    Patterns = new[] { "*.csv", "*.xlsx", "*.xls" },
-                    MimeTypes = new[]
+                    new("CSV and Excel Files")
                     {
-                        "text/csv",
-                        "application/vnd.ms-excel",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        Patterns = new[] { "*.csv", "*.xlsx", "*.xls" },
+                        MimeTypes = new[]
+                        {
+                            "text/csv",
+                            "application/vnd.ms-excel",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        }
+                    },
+                    new("All Files")
+                    {
+                        Patterns = new[] { "*.*" }
                     }
-                },
-                new("All Files")
-                {
-                    Patterns = new[] { "*.*" }
                 }
-            }
-        });
-
-        if (files.Count >= 1)
-        {
-            // Open reading stream from the first file.
-            var file = files[0];
-            var ext = Path.GetExtension(file.Name).ToLowerInvariant();
-            await using var stream = await files[0].OpenReadAsync();
-
-            var list = await Task.Run(async () =>
-            {
-                return await ImportController.FileContentToContactListAsync(stream, ext);
             });
 
-            list
-                .ForEach(AllContacts.Add);
-            SetLastBatchAsCurrent();
+            if (files.Count >= 1)
+            {
+                // Open reading stream from the first file.
+                var file = files[0];
+                var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                await using var stream = await files[0].OpenReadAsync();
+
+                var list = await Task.Run(async () =>
+                {
+                    return await ImportController.FileContentToContactListAsync(stream, ext);
+                    //TODO: Pop-up about state of import (all successfull; unvalid rows/cells?)
+                });
+
+                list
+                    .ForEach(AllContacts.Add);
+                
+                SetLastBatchAsCurrent();
+                CheckColumnVisibility();
+            }
         }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+        }
+    }
+
+    private void CheckColumnVisibility()
+    {
+        IsNameVisible = AllContacts.Any(c => !string.IsNullOrWhiteSpace(c.Name));
+        IsMobileVisible = AllContacts.Any(c => !string.IsNullOrWhiteSpace(c.MobileNumber));
+        IsEmailVisible = AllContacts.Any(c => !string.IsNullOrWhiteSpace(c.Email));
+        IsRegionVisible = AllContacts.Any(c => !string.IsNullOrWhiteSpace(c.HomeRegion));
+        IsPreferenceVisible = AllContacts.Any(c => c.ContactPreference != TransmissionType.NONE);
     }
 
     public void ContinueToMessageConfiguration()

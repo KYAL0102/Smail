@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using ClosedXML.Excel;
 using Core.Models;
 
@@ -17,66 +18,136 @@ public static class ImportController
     public static async Task<List<Contact>> ReadFromCsvContentAsync(Stream stream, bool hasHeader)
     {
         using var streamReader = new StreamReader(stream);
-        // Reads all the content of file as a text.
         var fileContent = await streamReader.ReadToEndAsync();
 
-        List<Contact> contacts = [];
-
         var lines = fileContent
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .ToList();
 
-        lines
-            .Skip(hasHeader ? 1 : 0)
-            .Select(line => line.Split(','))
-            .Where(parts => parts.Length >= 3)
-            .Select(line => new Contact
-            {
-                Name = line[0],
-                MobileNumber = !string.IsNullOrWhiteSpace(line[1]) && FormatChecker.IsValidMobile(line[1]) ? line[1] : string.Empty,
-                Email = !string.IsNullOrWhiteSpace(line[2]) && FormatChecker.IsValidEmail(line[2]) ? line[2] : string.Empty
-            })
-            .ToList()
-            .ForEach(contacts.Add);
+        if (lines.Count == 0) return [];
 
-        return contacts;
+        // 1. Identify Header Mappings
+        var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        int dataStartIndex = 0;
+
+        if (hasHeader)
+        {
+            var headers = lines[0].Split(',');
+            for (int i = 0; i < headers.Length; i++)
+            {
+                headerMap[headers[i].Replace(" ", "").ToLower()] = i;
+            }
+            dataStartIndex = 1;
+        }
+        else
+        {
+            // Default mapping if no header: assume 0=Name, 1=Mobile, 2=Email
+            headerMap["name"] = 0;
+            headerMap["mobilenumber"] = 1;
+            headerMap["email"] = 2;
+            headerMap["homeRegion"] = 3;
+            headerMap["contactpreference"] = 4;
+        }
+
+        // Helper to safely get value by header name
+        string GetVal(string[] parts, string columnName) =>
+            headerMap.TryGetValue(columnName, out int index) && index < parts.Length 
+                ? parts[index].Trim() 
+                : string.Empty;
+
+        // 2. Process Data
+        return lines
+            .Skip(dataStartIndex)
+            .Select(line => line.Split(','))
+            .Select(parts => {
+                var name = GetVal(parts, "name");
+                var mobile = GetVal(parts, "mobilenumber");
+                var email = GetVal(parts, "email");
+                var homeRegion = GetVal(parts, "homeregion");
+                var contactPreference = GetVal(parts, "contactpreference");
+
+                return new Contact
+                {
+                    Name = name,
+                    MobileNumber = FormatChecker.IsValidMobile(mobile) ? mobile : string.Empty,
+                    Email = FormatChecker.IsValidEmail(email) ? email : string.Empty,
+                    HomeRegion = homeRegion,
+                    ContactPreference = Enum.TryParse<TransmissionType>(contactPreference, ignoreCase: true, out var pref) 
+                                        ? pref 
+                                        : TransmissionType.NONE
+                };
+            })
+            .Where(c => !string.IsNullOrEmpty(c.Name)) // Ensure 'required' Name is present
+            .ToList();
     }
 
     public static async Task<List<Contact>> ReadFromXlsXContent(Stream stream, bool hasHeader)
     {
         using var memStream = new MemoryStream();
         await stream.CopyToAsync(memStream);
-        memStream.Position = 0; // rewind before reading
+        memStream.Position = 0;
 
         var contacts = new List<Contact>();
 
         using (var workbook = new XLWorkbook(memStream))
         {
-            // Read the first worksheet
             var ws = workbook.Worksheets.First();
+            var rows = ws.RowsUsed();
+            if (!rows.Any()) return contacts;
 
-            // Skip header row if requested
-            var rows = hasHeader ? ws.RowsUsed().Skip(1) : ws.RowsUsed();
-
-            foreach (var row in rows)
+            // 1. Map Headers to Column Numbers
+            var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var firstRow = ws.FirstRowUsed();
+            
+            if (hasHeader)
             {
-                var name = row.Cell(1).GetValue<string>();
-                var mobile = row.Cell(2).GetValue<string>();
-                var email = row.Cell(3).GetValue<string>();
+                foreach (var cell in firstRow.CellsUsed())
+                {
+                    headerMap[cell.GetValue<string>().Replace(" ", "")] = cell.Address.ColumnNumber;
+                }
+            }
+            else
+            {
+                // Default mapping if no headers exist
+                headerMap["Name"] = 1;
+                headerMap["MobileNumber"] = 2;
+                headerMap["Email"] = 3;
+                headerMap["HomeRegion"] = 4;
+                headerMap["ContactPreference"] = 5;
+            }
 
-                // Ignore blank rows
-                if (string.IsNullOrWhiteSpace(name) &&
-                    string.IsNullOrWhiteSpace(mobile) &&
-                    string.IsNullOrWhiteSpace(email))
-                    continue;
+            // Helper to safely get cell value by header name
+            string GetCellValue(IXLRow row, string columnName) =>
+                headerMap.TryGetValue(columnName, out int colNum) 
+                    ? row.Cell(colNum).GetValue<string>().Trim() 
+                    : string.Empty;
+
+            // 2. Process Data Rows
+            var dataRows = hasHeader ? rows.Skip(1) : rows;
+
+            foreach (var row in dataRows)
+            {
+                var name = GetCellValue(row, "Name");
+                var mobile = GetCellValue(row, "MobileNumber");
+                var email = GetCellValue(row, "Email");
+                var region = GetCellValue(row, "HomeRegion");
+                var rawPref = GetCellValue(row, "ContactPreference");
+
+                // Ignore rows where the required Name is missing
+                if (string.IsNullOrWhiteSpace(name)) continue;
 
                 contacts.Add(new Contact
                 {
                     Name = name,
-                    MobileNumber = mobile,
-                    Email = email
+                    MobileNumber = FormatChecker.IsValidMobile(mobile) ? mobile : string.Empty,
+                    Email = FormatChecker.IsValidEmail(email) ? email : string.Empty,
+                    HomeRegion = region,
+                    // Parse Enum safely
+                    ContactPreference = Enum.TryParse<TransmissionType>(rawPref, true, out var pref) 
+                                        ? pref 
+                                        : TransmissionType.SMS
                 });
             }
         }

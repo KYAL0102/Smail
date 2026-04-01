@@ -50,11 +50,13 @@ public class PayloadExecutionViewModel: ViewModelBase
         var emailContacts = _payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.Email)
             .Select(kvp => kvp.Key)
+            .Distinct()
             .ToList();
         
         var smsContacts = _payload.Contacts
             .Where(kvp => kvp.Value == TransmissionType.SMS)
             .Select(kvp => kvp.Key.MobileNumber)
+            .Distinct()
             .ToList();
         
         var message = _payload.Message;

@@ -53,9 +53,25 @@
               HeadersVisibility="All"
               GridLinesVisibility="All">
       <DataGrid.Columns>
-        <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
-        <DataGridTextColumn Header="Mobile Number" Binding="{Binding MobileNumber}"/>
-        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
+        <DataGridTextColumn Header="Name" Width="*"
+                            Binding="{Binding Name}" 
+                            IsVisible="{Binding IsNameVisible}"/>
+
+        <DataGridTextColumn Header="Mobile-Number" Width="*"
+                            Binding="{Binding MobileNumber}" 
+                            IsVisible="{Binding IsMobileVisible}" />
+
+        <DataGridTextColumn Header="Email" Width="*"
+                            Binding="{Binding Email}" 
+                            IsVisible="{Binding IsEmailVisible}" />
+
+        <DataGridTextColumn Header="Home-Region" Width="*"
+                            Binding="{Binding HomeRegion}" 
+                            IsVisible="{Binding IsRegionVisible}" />
+        
+        <DataGridTextColumn Header="Contact-Preference" Width="*"
+                            Binding="{Binding ContactPreference}" 
+                            IsVisible="{Binding IsPreferenceVisible}"/>
 
         <DataGridTemplateColumn Header="" Width="Auto">
             <DataGridTemplateColumn.CellTemplate>

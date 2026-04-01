@@ -21,9 +21,10 @@ public class SettingsViewModel : ViewModelBase
     private Session _session;
     private Window? _window;
 
-    public EmailInput? EmailInput { get; } = null;
+    public EmailInput EmailInput { get; }
 
-    public SmsGatewayInput? SmsInput { get; } = null;
+    public SmsGatewayInput SmsInput { get; }
+    public DataSettingsControl DataSettingsInput { get; }
 
     /*private string _whSigningKey = string.Empty;
     public string WebhookSigningKey
@@ -112,6 +113,7 @@ public class SettingsViewModel : ViewModelBase
 
         SmsInput = new(true, true, _session);
         EmailInput = new(true, _session);
+        DataSettingsInput = new();
 
         CurrentVersion = UpdateChecker.GetCurrentVersion();
 
