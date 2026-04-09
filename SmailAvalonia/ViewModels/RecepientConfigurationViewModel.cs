@@ -11,12 +11,15 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
+using Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using SmailAvalonia.Views;
 
 namespace SmailAvalonia.ViewModels;
 
 public partial class RecepientConfigurationViewModel: ViewModelBase
 {
+    private SecurityVault _securityVault;
     private Session _session;
     private RecepientConfiguration _userControl;
     private List<Contact> AllContacts { get; } = new()
@@ -77,19 +80,34 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
     [ObservableProperty] private bool _isNameVisible = false;
     [ObservableProperty] private bool _isMobileVisible = false;
     [ObservableProperty] private bool _isEmailVisible = false;
+    [ObservableProperty] private bool _isSentByVisible = false;
+    [ObservableProperty] private bool _isPayedByVisible = false;
     [ObservableProperty] private bool _isRegionVisible = false;
     [ObservableProperty] private bool _isPreferenceVisible = false;
+    private bool _isDataSourceSet = false;
+    public bool IsDataSourcSet
+    {
+        get => _isDataSourceSet;
+        set
+        {
+            _isDataSourceSet = value;
+            LoadFromSourceCommand.NotifyCanExecuteChanged();
+        }
+    }
 
     public RelayCommand PreviousBatchCommand { get; init; }
     public RelayCommand NextBatchCommand { get; init; }
     public RelayCommand AddSingleContactCommand { get; init; }
     public RelayCommand<Contact> RemoveContactCommand { get; init; }
     public RelayCommand PickFileForImport { get; init; }
+    public RelayCommand LoadFromSourceCommand { get; init; }
+    public RelayCommand ClearPoolCommand { get; init; }
     public RelayCommand ContinueToMessageConfig { get; init; }
     public RelayCommand OneStepBack { get; init; }
 
     public RecepientConfigurationViewModel(RecepientConfiguration userControl, Session session)
     {
+        _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _userControl = userControl;
         _session = session;
 
@@ -113,6 +131,12 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
             async () => await PickFileAsync(),
             () => true
         );
+        LoadFromSourceCommand = new
+        (
+            async () => await LoadFromSourceAsync(),
+            () => _isDataSourceSet
+        );
+        ClearPoolCommand = new(ClearRecepientPool);
         ContinueToMessageConfig = new(
             ContinueToMessageConfiguration
         );
@@ -120,14 +144,62 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
             NavigateOneStepBack
         );
 
+        IsDataSourcSet = !string.IsNullOrEmpty(_securityVault.RecepientBasePath);
+        Messenger.Subscribe(Globals.NewRecepientPoolBaseSourcePath, message => 
+        {
+            if (message.Data is string newPath) IsDataSourcSet = !string.IsNullOrEmpty(newPath);
+            else Console.WriteLine("New path is not a string.");
+        });
+
         AllContacts.Clear();
-        AllContacts.AddRange(_session.Payload.Contacts.Keys);
+        AllContacts.AddRange(_session.Payload.ContactPool.Keys);
     }
 
     public async Task InitializeDataAsync()
     {
         SetLastBatchAsCurrent();
         await Task.CompletedTask;
+    }
+
+    private void ClearRecepientPool()
+    {
+        AllContacts.Clear();
+        SetLastBatchAsCurrent();
+    }
+
+    private async Task LoadFromSourceAsync()
+    {
+        var path = _securityVault.RecepientBasePath;
+        var type = FormatChecker.GetDataSourceType(path);
+        var storageProvider = TopLevel.GetTopLevel(_userControl)?.StorageProvider;
+
+        if(type == DataSourceType.INVALID || storageProvider == null)
+        {
+            Console.WriteLine($"type is invalid or storageProvider is null.");
+            return; //TODO: POPUP that path is not valid (should not occur)
+        }
+
+        List<Contact>? list = null;
+        if (type == DataSourceType.LOCAL)
+        {
+            var file = await storageProvider.TryGetFileFromPathAsync(path);
+            if(file == null)
+            {
+                Console.WriteLine($"File on {path} does not exist.");
+                return;
+            }
+            list = await GetFromFileAsync(file);
+
+        }
+        else if (type == DataSourceType.URI)
+        {
+            list = await NetworkManager.FetchFromUriAsync(path);
+        }
+
+        list?
+            .ForEach(AllContacts.Add);
+
+        SetLastBatchAsCurrent();
     }
 
     private void SetLastBatchAsCurrent()
@@ -138,6 +210,7 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
         CurrentStartIndex = startIndex;
 
         UpdateCurrentBatch(lastBatchSize);
+        CheckColumnVisibility();
     }
 
     private void UpdateCurrentBatch(int batchSize = -1)
@@ -189,7 +262,6 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
         AllContacts.Add(newContact);
         ResetSingleContactInputFields();
         SetLastBatchAsCurrent();
-        CheckColumnVisibility();
     }
 
     private void ResetSingleContactInputFields()
@@ -204,7 +276,6 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
         if (contact == null) return;
 
         AllContacts.Remove(contact);
-        CheckColumnVisibility();
         SetLastBatchAsCurrent(); //TODO: Stay on current batch
     }
 
@@ -241,27 +312,30 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
             if (files.Count >= 1)
             {
                 // Open reading stream from the first file.
-                var file = files[0];
-                var ext = Path.GetExtension(file.Name).ToLowerInvariant();
-                await using var stream = await files[0].OpenReadAsync();
-
-                var list = await Task.Run(async () =>
-                {
-                    return await ImportController.FileContentToContactListAsync(stream, ext);
-                    //TODO: Pop-up about state of import (all successfull; unvalid rows/cells?)
-                });
+                var list = await GetFromFileAsync(files[0]);
 
                 list
                     .ForEach(AllContacts.Add);
                 
                 SetLastBatchAsCurrent();
-                CheckColumnVisibility();
             }
         }
         catch(Exception ex)
         {
             Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
         }
+    }
+
+    private async Task<List<Contact>> GetFromFileAsync(IStorageFile file)
+    {
+        var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+        await using var stream = await file.OpenReadAsync();
+
+        return await Task.Run(async () =>
+        {
+            return await ImportController.FileContentToContactListAsync(stream, ext);
+            //TODO: Pop-up about state of import (all successfull; unvalid rows/cells?)
+        });
     }
 
     private void CheckColumnVisibility()
@@ -271,6 +345,8 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
         IsEmailVisible = AllContacts.Any(c => !string.IsNullOrWhiteSpace(c.Email));
         IsRegionVisible = AllContacts.Any(c => !string.IsNullOrWhiteSpace(c.HomeRegion));
         IsPreferenceVisible = AllContacts.Any(c => c.ContactPreference != TransmissionType.NONE);
+        IsSentByVisible = AllContacts.Any(c => !string.IsNullOrEmpty(c.SentBy));
+        IsPayedByVisible = AllContacts.Any(c => !string.IsNullOrEmpty(c.PayedBy));
     }
 
     public void ContinueToMessageConfiguration()
@@ -309,7 +385,7 @@ public partial class RecepientConfigurationViewModel: ViewModelBase
             finallist[contact] = type;
         }
 
-        _session.Payload.Contacts = finallist;
+        _session.Payload.ContactPool = finallist;
     }
 
     private void NavigateOneStepBack()

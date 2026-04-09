@@ -11,12 +11,136 @@ using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto.Parameters;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Core.Models;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 
 namespace Core.Services;
 
 public static class NetworkManager
 {
+    public static async Task<List<Contact>> FetchFromUriAsync(string uri)
+    {
+        // Use a handler to bypass SSL certificate errors for local IP testing
+        using var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        };
+
+        using var client = new HttpClient(handler);
+
+        try
+        {
+            var options = new JsonSerializerOptions
+            {
+                // This handles different casing (e.g., "email" vs "Email")
+                PropertyNameCaseInsensitive = true,
+                // This allows us to map the string "Whatsapp" directly to an Enum if needed
+                Converters = { new JsonStringEnumConverter() }
+            };
+
+            // Deserializes whatever properties match; the rest stay null.
+            var rawData = await client.GetFromJsonAsync<List<ParticipantDto>>(uri, options);
+
+            if (rawData == null) return [];
+
+            // Apply your domain logic and validation, similar to your ReadFromCsvContentAsync
+            return rawData
+                .Select(dto => new Contact
+                {
+                    // Use null-coalescing (??) to handle missing properties
+                    Name = dto.Name ?? string.Empty,
+                    
+                    // Validate if present, otherwise empty
+                    MobileNumber = !string.IsNullOrEmpty(dto.MobileNumber) && FormatChecker.IsValidMobile(dto.MobileNumber) 
+                                ? dto.MobileNumber 
+                                : string.Empty,
+                    
+                    Email = !string.IsNullOrEmpty(dto.Email) && FormatChecker.IsValidEmail(dto.Email) 
+                            ? dto.Email 
+                            : string.Empty,
+                    
+                    SentBy = !string.IsNullOrEmpty(dto.SentBy) ? dto.SentBy : string.Empty,
+
+                    PayedBy = !string.IsNullOrEmpty(dto.PayedBy) ? dto.PayedBy : string.Empty,
+
+                    HomeRegion = dto.HomeRegion ?? "Unknown",
+
+                    // Handle the Enum conversion for TransmissionType
+                    ContactPreference = Enum.TryParse<TransmissionType>(dto.TransmissionType, true, out var pref) 
+                                        ? pref 
+                                        : TransmissionType.NONE
+                })
+                // Maintain your requirement: Name must exist
+                .Where(c => !string.IsNullOrWhiteSpace(c.Name))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            // Log the error (consider using a logging service here)
+            Console.WriteLine($"Error fetching data: {ex.Message} - {ex.StackTrace}");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// This DTO covers all possible properties. 
+    /// If the API returns fewer, the extras remain null.
+    /// If the order changes, JSON deserialization doesn't care.
+    /// </summary>
+    public class ParticipantDto
+    {
+        public string? Email { get; set; }
+        public string? HomeRegion { get; set; }
+        public string? MobileNumber { get; set; }
+        public string? Name { get; set; }
+        public string? PayedBy { get; set; }
+        public string? SentBy { get; set; }
+        public string? TransmissionType { get; set; }
+    }
+    public static async Task<(bool Success, string Message)> VerifySourceAsync(string path)
+    {
+        // Case 1: It's a Web URL
+        if (path.StartsWith("http"))
+        {
+            try
+            {
+                var handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
+                };
+                using var client = new HttpClient(handler);
+                // Set a short timeout so the UI doesn't hang forever
+                client.Timeout = TimeSpan.FromSeconds(5); 
+
+                var response = await client.GetAsync(path);
+                
+                if (!response.IsSuccessStatusCode)
+                    return (false, $"Server returned error: {response.StatusCode}");
+
+                // Verify content type (optional but helpful)
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                if (contentType != "application/json" && !path.EndsWith(".csv"))
+                {
+                    // You can warn them, but maybe proceed anyway
+                    return (true, "Warning: Response format might not be standard JSON/CSV.");
+                }
+                
+                return (true, "URL is reachable.");
+            }
+            catch (Exception ex) { return (false, $"URL unreachable: {ex.Message}"); }
+        }
+
+        // Case 2: It's a Local File
+        else
+        {
+            if (File.Exists(path))
+                return (true, "File found.");
+            else
+                return (false, "File does not exist at the specified path.");
+        }
+    }
     // ----------------------------------------------------------------------
     //  PUBLIC ENTRY POINT
     // ----------------------------------------------------------------------

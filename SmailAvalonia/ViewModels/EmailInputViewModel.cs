@@ -218,6 +218,7 @@ public class EmailInputViewModel : ViewModelBase
         var package = new TokenPackage();
         package.Email = Email;
         package.AccessToken = loginResult.AccessToken;
+        if(string.IsNullOrEmpty(package.Name)) package.Name = await EmailService.GetFullNameFromGoogleAccessTokenAsync(package.AccessToken);
         package.AccessTokenExpiration = loginResult.AccessTokenExpiration;
         package.RefreshToken = loginResult.RefreshToken;
             

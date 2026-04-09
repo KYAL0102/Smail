@@ -1,12 +1,10 @@
-using System.IdentityModel.Tokens.Jwt;
 using Core.Models;
-using Core.Models.ApiResponseClasses;
 using Core.Models.EmailAuthentication;
-using DocumentFormat.OpenXml;
-using Duende.IdentityModel.OidcClient;
-using Duende.IdentityModel.OidcClient.Results;
 using Google.Apis.Auth.OAuth2;
+using Google.Apis.Oauth2.v2;
+using Google.Apis.Oauth2.v2.Data;
 using Google.Apis.Gmail.v1;
+using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
@@ -38,11 +36,39 @@ public class EmailService
         {
             return _emailProvider.Name switch
             {
-                "Google" => SendGmailAsync(TokenPackage.AccessToken, fromGoogleEmail, contact.Email, subject, message),
-                "Microsoft" => SendOutlookAsync(TokenPackage.AccessToken, contact.Email, subject, message),
+                "Google" => Task.Run(async () => 
+                    {
+                        var name = TokenPackage.Name;
+                        if(string.IsNullOrEmpty(name)) name = await GetFullNameFromGoogleAccessTokenAsync(TokenPackage.AccessToken);
+                        await SendGmailAsync(TokenPackage.AccessToken, name, fromGoogleEmail, contact, subject, message);
+                    }),
+                "Microsoft" => SendOutlookAsync(TokenPackage.AccessToken, contact, subject, message),
                 _ => throw new NotSupportedException($"Provider {_emailProvider.Name} not supported")
             };
         })).ToList();
+    }
+
+    public static async Task<string> GetFullNameFromGoogleAccessTokenAsync(string accessToken)
+    {
+        var credential = GoogleCredential.FromAccessToken(accessToken);
+        var oauthService = new Oauth2Service(new BaseClientService.Initializer {
+            HttpClientInitializer = credential,
+            ApplicationName = "Smail-Personal"
+        });
+
+        var fullName = string.Empty;
+        try 
+        {
+            // Fetch the profile name
+            var userInfo = await oauthService.Userinfo.Get().ExecuteAsync();
+            fullName = userInfo.Name;
+        }
+        catch (Exception ex)
+        {
+            // Fallback if the profile scope is missing or request fails
+            Console.WriteLine($"Could not retrieve profile name: {ex.Message}");
+        }
+        return fullName;
     }
     
     private static async Task<ContactSendStatus> ExecuteSendTask(Models.Contact contact, Func<Task> sendAction)
@@ -73,7 +99,7 @@ public class EmailService
         }
     }
 
-    private static async Task SendGmailAsync(string accessToken, string email, string to, string subject, string body)
+    private static async Task SendGmailAsync(string accessToken, string fullName, string email, Models.Contact to, string subject, string body)
     {
         var credential = GoogleCredential.FromAccessToken(accessToken);
         var service = new GmailService(new BaseClientService.Initializer {
@@ -82,8 +108,8 @@ public class EmailService
         });
 
         var mimeMessage = new MimeKit.MimeMessage();
-        mimeMessage.From.Add(new MailboxAddress("Sender", email)); 
-        mimeMessage.To.Add(new MailboxAddress("Recipient", to));
+        mimeMessage.From.Add(new MailboxAddress(fullName, email)); 
+        mimeMessage.To.Add(new MailboxAddress(to.Name, to.Email));
         mimeMessage.Subject = subject;
         mimeMessage.Body = new TextPart("plain") { Text = body };
 
@@ -91,8 +117,30 @@ public class EmailService
             Raw = Base64UrlEncode(mimeMessage)
         };
 
-        Console.WriteLine("Sending single email via google...");
-        await service.Users.Messages.Send(msg, "me").ExecuteAsync();
+        try 
+        {
+            var response = await service.Users.Messages.Send(msg, "me").ExecuteAsync();
+
+            if (!string.IsNullOrEmpty(response.Id)) 
+            {
+                Console.WriteLine($"Message sent successfully! ID: {response.Id}");
+            }
+
+            var mods = new ModifyMessageRequest { 
+                RemoveLabelIds = new List<string> { "INBOX", "UNREAD" } 
+            };
+            await service.Users.Messages.Modify(mods, "me", response.Id).ExecuteAsync();
+        }
+        catch (Google.GoogleApiException e) 
+        {
+            // This catches errors specific to the Google API (e.g., invalid tokens, rate limits)
+            Console.WriteLine($"Google API Error: {e.Error.Message}");
+        }
+        catch (Exception e) 
+        {
+            // This catches general errors (e.g., no internet connection)
+            Console.WriteLine($"General Error: {e.Message}");
+        }
     }
 
     private static async Task BroadcastGmailOverBccAsync(string accessToken, List<string> recipients, string subject, string body)
@@ -118,7 +166,7 @@ public class EmailService
         await service.Users.Messages.Send(msg, "me").ExecuteAsync();
     }
 
-    private static async Task SendOutlookAsync(string accessToken, string to, string subject, string body)
+    private static async Task SendOutlookAsync(string accessToken, Models.Contact to, string subject, string body)
     {
         var tokenProvider = new SimpleTokenProvider(accessToken);
         var authProvider = new BaseBearerTokenAuthenticationProvider(tokenProvider);
@@ -137,7 +185,7 @@ public class EmailService
                 },
                 ToRecipients = new List<Microsoft.Graph.Models.Recipient>
                 {
-                    new Microsoft.Graph.Models.Recipient { EmailAddress = new EmailAddress { Address = to } },
+                    new Microsoft.Graph.Models.Recipient { EmailAddress = new EmailAddress { Name = to.Name, Address = to.Email } },
                 }
             },
             SaveToSentItems = true

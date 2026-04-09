@@ -14,6 +14,8 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*"/>
@@ -22,14 +24,20 @@
 
     <Label Grid.Row="0" Grid.Column="0" Content="Summary" HorizontalAlignment="Center"/>
 
-    <Label Grid.Row="1" Grid.Column="0" Content="Message:"/>
+    <Label Grid.Row="1" Grid.Column="0" Content="Subject:"/>
     <Border Grid.Row="2" Grid.Column="0" BorderBrush="White" BorderThickness="1" CornerRadius="5">
+      <TextBlock Text="{Binding Subject}"
+                 TextWrapping="Wrap"/>
+    </Border>
+
+    <Label Grid.Row="3" Grid.Column="0" Content="Message:"/>
+    <Border Grid.Row="4" Grid.Column="0" BorderBrush="White" BorderThickness="1" CornerRadius="5">
       <TextBlock Text="{Binding Message}"
                  TextWrapping="Wrap" Height="200"/>
     </Border>
 
-    <Label Grid.Row="3" Grid.Column="0" Content="Recipients:"/>
-    <Grid Grid.Row="4" Grid.Column="0">
+    <Label Grid.Row="5" Grid.Column="0" Content="Recipients:"/>
+    <Grid Grid.Row="6" Grid.Column="0">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="Auto"/>
@@ -46,7 +54,7 @@
       </StackPanel>
     </Grid>
     
-    <UniformGrid Grid.Row="5" Grid.Column="0" Columns="2">
+    <UniformGrid Grid.Row="7" Grid.Column="0" Columns="2">
       <Button Content="Back" HorizontalAlignment="Left" Command="{Binding BackToConfigurationCommand}"/>
       <Button Content="Send" HorizontalAlignment="Right" Command="{Binding ExecutePayloadCommand}"/>
     </UniformGrid>

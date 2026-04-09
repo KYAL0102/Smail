@@ -11,4 +11,5 @@ public static class Globals
     public static string NavigateToRecepientConfigurationAction { get; } = "contactConfig";
     public static string NavigateToExecutionAction { get; } = "execution";
     public static string NewSessionAction { get; } = "newSession";
+    public static string NewRecepientPoolBaseSourcePath { get; } = "sourcePathChanged";
 }

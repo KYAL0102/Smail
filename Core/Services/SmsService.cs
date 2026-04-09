@@ -176,9 +176,10 @@ public class SmsService
         await Task.WhenAll(tasks);
     }
 
-    public async Task<List<Recipient>> SendMessageAsync(string message, string[] numbers)
+    public async Task<List<Recipient>> SendMessageAsync(string subject, string message, string[] numbers)
     {
         var url = $"http://{DeviceIP}:{Port}/message";
+        if(!string.IsNullOrEmpty(subject))  message = $"{subject}{Environment.NewLine}{Environment.NewLine}{message}";
 
         using var aesPassphraseAccessor = _securityVault.GetAesPassphrase();
 

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-   <!--<AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>-->
+    <!--<AllowMissingPrunePackageData>true</AllowMissingPrunePackageData>-->
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
@@ -11,6 +11,7 @@
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Duende.IdentityModel.OidcClient" Version="7.0.0" />
     <PackageReference Include="Google.Apis.Gmail.v1" Version="1.73.0.4029" />
+    <PackageReference Include="Google.Apis.Oauth2.v2" Version="1.68.0.1869" />
     <PackageReference Include="Microsoft.Graph" Version="5.103.0" />
     <PackageReference Include="MimeKit" Version="4.15.1" />
   </ItemGroup>

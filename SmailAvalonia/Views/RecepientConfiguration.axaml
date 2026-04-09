@@ -20,10 +20,12 @@
       <ColumnDefinition Width="Auto"/>
     </Grid.ColumnDefinitions>
 
-    <Label Grid.Row="0" Grid.Column="0" Content="Recipients:"/>
+    <Label Grid.Row="0" Grid.Column="0" Content="Recipient Pool:"/>
     <UniformGrid Grid.Row="1" Grid.Column="0" Columns="2">
       <StackPanel Orientation="Vertical" VerticalAlignment="Top">
         <Button Content="Upload from file" Command="{Binding PickFileForImport}"/>
+        <Button Content="Load from Source" Command="{Binding LoadFromSourceCommand}"/>
+        <Button Content="Clear Pool" Command="{Binding ClearPoolCommand}"/>
       </StackPanel>
       <Grid>
         <Grid.ColumnDefinitions>
@@ -64,6 +66,14 @@
         <DataGridTextColumn Header="Email" Width="*"
                             Binding="{Binding Email}" 
                             IsVisible="{Binding IsEmailVisible}" />
+
+        <DataGridTextColumn Header="SentBy" Width="*"
+                            Binding="{Binding SentBy}" 
+                            IsVisible="{Binding IsSentByVisible}" />
+
+        <DataGridTextColumn Header="PayedBy" Width="*"
+                            Binding="{Binding PayedBy}" 
+                            IsVisible="{Binding IsPayedByVisible}" />
 
         <DataGridTextColumn Header="Home-Region" Width="*"
                             Binding="{Binding HomeRegion}" 

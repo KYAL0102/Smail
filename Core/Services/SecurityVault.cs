@@ -21,6 +21,21 @@ public class SecurityVault : IDisposable
     private readonly string? _pwd = null;
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
+    
+    private string _recepientBasePath = string.Empty;
+    public string RecepientBasePath 
+    { 
+        get => _recepientBasePath;
+        set
+        {
+            _recepientBasePath = value;
+            Messenger.Publish(new Message
+            {
+                Action = Globals.NewRecepientPoolBaseSourcePath,
+                Data = value
+            });
+        } 
+    }
 
     // EMAIL
     private List<TokenPackage> _tokenPackages = [];
@@ -31,7 +46,6 @@ public class SecurityVault : IDisposable
     }
 
     // ── Persistence Logic ──────────────────────────────────────────────────────
-
     public async Task SaveToFileAsync()
     {
         if (_pwd == null) return;
@@ -42,6 +56,7 @@ public class SecurityVault : IDisposable
             WhSigningKey = SecureStringToString(_whSigningKey) ?? string.Empty,
             GatewayUsername = SmsGatewayUsername,
             GatewayPassword = SecureStringToString(_gatewayPassword) ?? string.Empty,
+            RecepientBasePath = RecepientBasePath,
             TokenPackages = _tokenPackages
         };
 
@@ -75,6 +90,7 @@ public class SecurityVault : IDisposable
                 _whSigningKey = StringToSecureString(data.WhSigningKey);
                 SmsGatewayUsername = data.GatewayUsername ?? string.Empty;
                 _gatewayPassword = StringToSecureString(data.GatewayPassword);
+                RecepientBasePath = data.RecepientBasePath ?? string.Empty;
                 _tokenPackages = data.TokenPackages;
             }
 
@@ -87,6 +103,12 @@ public class SecurityVault : IDisposable
     }
 
     // ── Public API (Modified to Auto-Save) ──────────────────────────────────────
+
+    public async Task ClearTokenPackageListAsync()
+    {
+        _tokenPackages.Clear();
+        await SaveToFileAsync();
+    }
 
     public void SetGateWayCredentials(string usr, string? pwd)
     {
@@ -106,39 +128,50 @@ public class SecurityVault : IDisposable
 
     public void UpdatePackageInList(TokenPackage package)
     {
-        var packageInList = _tokenPackages.SingleOrDefault(p => p.Email == package.Email);
+        var existing = _tokenPackages.FirstOrDefault(p => p.Email == package.Email);
 
-        if (packageInList == null) return; 
-
-        packageInList.AccessToken = package.AccessToken;
-        packageInList.AccessTokenExpiration = package.AccessTokenExpiration;
-        packageInList.RefreshToken = package.RefreshToken;
-
-        Console.WriteLine("Updated TokenPackage!");
+        if (existing != null) 
+        {
+            var index = _tokenPackages.IndexOf(existing);
+            _tokenPackages[index] = package;
+        }
+        else 
+        {
+            Console.WriteLine($"No entry found for '{package.Email}'.");
+        }
     }
 
     public void UpdatePackageInListViaRefreshTokenResult(string email, RefreshTokenResult result)
     {
-        var package = new TokenPackage();
+        var existing = _tokenPackages.FirstOrDefault(p => p.Email == email);
 
-        package.Email = email;
-        package.AccessToken = result.AccessToken;
-        package.AccessTokenExpiration = result.AccessTokenExpiration;
-        package.RefreshToken = result.RefreshToken;
-
-        UpdatePackageInList(package);
+        if (existing != null)
+        {
+            // Update ONLY the auth fields so you don't lose other data in the object
+            existing.AccessToken = result.AccessToken;
+            existing.AccessTokenExpiration = result.AccessTokenExpiration;
+            
+            // Only update RefreshToken if the result actually provided a new one
+            if (!string.IsNullOrEmpty(result.RefreshToken))
+            {
+                existing.RefreshToken = result.RefreshToken;
+            }
+        }
+        else Console.WriteLine($"No existing tokenPackage with email '{email}' found.");
     }
 
     public void AddPackageToList(TokenPackage package)
     {
-        if(_tokenPackages.Any(item => item.Email == package.Email))
+        var index = _tokenPackages.FindIndex(item => item.Email == package.Email);
+
+        if (index != -1)
         {
-            UpdatePackageInList(package);
+            _tokenPackages[index] = package; // Standard Upsert
             return;
         }
 
         _tokenPackages.Add(package);
-        Console.WriteLine("New entry into TokenPackage-list!");
+        Console.WriteLine($"New entry added for {package.Email}!");
     }
 
     public SecureStringAccessor? GetAesPassphrase() 

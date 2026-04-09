@@ -24,10 +24,19 @@ public class MessageConfigurationViewModel: ViewModelBase
         }
     }
 
-    private UserControl _userControl { get; init; }
-    public MessageConfigurationViewModel(UserControl userControl, Session session)
+    private string _subject = string.Empty;
+    public string Subject
     {
-        _userControl = userControl;
+        get => _subject;
+        set
+        {
+            _subject = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public MessageConfigurationViewModel(Session session)
+    {
         _session = session;
         
         ContinueToSummaryCommand = new(
@@ -38,6 +47,7 @@ public class MessageConfigurationViewModel: ViewModelBase
             NavigateToPreviousStep
         );
 
+        Subject = _session.Payload.Subject;
         Message = _session.Payload.Message;
     }
 
@@ -48,6 +58,7 @@ public class MessageConfigurationViewModel: ViewModelBase
 
     private void ContinueToPayloadSummary()
     {
+        _session.Payload.Subject = Subject;
         _session.Payload.Message = Message;
         
         Messenger.Publish(new Message
@@ -58,6 +69,7 @@ public class MessageConfigurationViewModel: ViewModelBase
 
     private void NavigateToPreviousStep()
     {
+        _session.Payload.Subject = Subject;
         _session.Payload.Message = Message;
 
         Messenger.Publish(new Message

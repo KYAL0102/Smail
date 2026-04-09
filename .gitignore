@@ -56,5 +56,5 @@ nunit-*.xml
 Secrets/
 Releases/
 Publish/
-
 .vscode/
+TestFiles/

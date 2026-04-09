@@ -12,6 +12,16 @@ public class PayloadSummaryViewModel: ViewModelBase
 {
     private readonly Session _session;
 
+    private string _subject = string.Empty;
+    public string Subject
+    {
+        get => _subject;
+        set
+        {
+            _subject = value;
+            OnPropertyChanged();
+        }
+    }
     private string _message = string.Empty;
     public string Message
     {
@@ -86,8 +96,9 @@ public class PayloadSummaryViewModel: ViewModelBase
 
     private void EvaluateAmountOfTransmissionTypes()
     {
+        Subject = _session.Payload.Subject;
         Message = _session.Payload.Message;
-        SmsContactsAmount = _session.Payload.Contacts.Where(c => c.Value == TransmissionType.SMS).Count();
-        EmailContactsAmount = _session.Payload.Contacts.Where(c => c.Value == TransmissionType.Email).Count();
+        SmsContactsAmount = _session.Payload.ContactPool.Where(c => c.Value == TransmissionType.SMS).Count();
+        EmailContactsAmount = _session.Payload.ContactPool.Where(c => c.Value == TransmissionType.Email).Count();
     }
 }

@@ -14,6 +14,8 @@
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto"/>
@@ -22,15 +24,22 @@
 
       <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
                 Text="If the source is set, the recipient table will use it as base - for every new payload, the newest state will be fetched from the source and stored locally so that it can be reused if the application is offline."/>
-      <Button Grid.Row="1" Grid.Column="0" Content="Set source"/>
-      <TextBox Grid.Row="1" Grid.Column="1"/>
+      <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
+        <Button Content="Edit" Command="{Binding EditSourcePathCommand}"/>
+        <Button Content="Cancel" Command="{Binding CancelSourcePathEditingCommand}"/>
+        <Button Content="Apply" Command="{Binding ApplySourcePathCommand}"/>
+      </StackPanel>
+      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DataSourcePathInput}" IsEnabled="{Binding EditingDataSource}"/>
+      <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+            Foreground="Red" HorizontalAlignment="Right"
+            Content="{Binding DataSrcErrorMsg}"/>
 
-      <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
+      <!--<TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
                 Text="This will delete the storage file, which contains Credentials, Tokens and Temporary Files"/>
-      <Button Grid.Row="3" Grid.Column="0" Content="Clear data"/>
+      <Button Grid.Row="4" Grid.Column="0" Content="Clear data" Command="{Binding ClearStorageCommand}"/>
 
-      <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
+      <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" TextWrapping="Wrap"
                 Text="This will delete all data and reset the application to the inital state of installation."/>
-      <Button Grid.Row="5" Grid.Column="0" Content="Reset Application"/>
+      <Button Grid.Row="6" Grid.Column="0" Content="Reset Application" Command="{Binding ResetApplicationCommand}"/>-->
     </Grid>
 </UserControl>

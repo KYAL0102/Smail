@@ -14,7 +14,7 @@ public class EmailProviderService
         {
             Name = "Google",
             AuthorityUrl = "accounts.google.com",
-            Scope = "openid profile email https://www.googleapis.com/auth/gmail.send",
+            Scope = "openid profile email https://www.googleapis.com/auth/gmail.modify",
             EmailDomains = 
             [
                 "gmail.com",

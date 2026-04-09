@@ -11,18 +11,24 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*"/>
       <ColumnDefinition Width="Auto"/>
     </Grid.ColumnDefinitions>
 
-    <Label Grid.Row="0" Content="Your Message:"/>
-    <TextBox Grid.Row="1" Grid.Column="0" Height="200" Text="{Binding Message, Mode=TwoWay}"
+    <Label Grid.Row="0" Content="Subject:"/>
+    <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding Subject, Mode=TwoWay}"
+             Watermark="The title of your message" MaxLength="60"/>
+
+    <Label Grid.Row="2" Content="Message-Body:"/>
+    <TextBox Grid.Row="3" Grid.Column="0" Height="200" Text="{Binding Message, Mode=TwoWay}"
              Watermark="Write your message content here!"
              AcceptsReturn="True" TextWrapping="Wrap"/>
     
-    <UniformGrid Grid.Row="2" Grid.Column="0" Columns="2">
+    <UniformGrid Grid.Row="4" Grid.Column="0" Columns="2">
       <Button Content="Back" HorizontalAlignment="Left" Command="{Binding OneStepBack}"/>
       <Button Content="Continue" HorizontalAlignment="Right" Command="{Binding ContinueToSummaryCommand}"/>
     </UniformGrid>

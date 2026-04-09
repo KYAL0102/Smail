@@ -13,7 +13,7 @@ public partial class MessageConfigurationControl : UserControl
     public MessageConfigurationControl(Session session)
     {
         InitializeComponent();
-        _viewModel = new(this, session);
+        _viewModel = new(session);
         DataContext = _viewModel;
         Loaded += UserControl_Loaded;
 

@@ -47,23 +47,25 @@ public class PayloadExecutionViewModel: ViewModelBase
     {
         RegisterToWebsocketEvent();
 
-        var emailContacts = _payload.Contacts
+        var emailContacts = _payload.ContactPool
             .Where(kvp => kvp.Value == TransmissionType.Email)
             .Select(kvp => kvp.Key)
             .Distinct()
             .ToList();
         
-        var smsContacts = _payload.Contacts
+        var smsContacts = _payload.ContactPool
             .Where(kvp => kvp.Value == TransmissionType.SMS)
             .Select(kvp => kvp.Key.MobileNumber)
             .Distinct()
             .ToList();
         
         var message = _payload.Message;
-        var emailSubject = "Test-Email"; //TODO: _session.Payload.EmailSession;
+        var subject = _payload.Subject; 
 
-        var smsTask = SendSms(message, smsContacts);
-        var emailTask = SendEmails(emailSubject, message, emailContacts);
+        Console.WriteLine($"Subject: {subject.Length} and Message: {message.Length}");
+
+        var smsTask = SendSms(subject, message, smsContacts);
+        var emailTask = SendEmails(subject, message, emailContacts);
 
         try
         {
@@ -75,16 +77,16 @@ public class PayloadExecutionViewModel: ViewModelBase
         }
     }
 
-    private async Task SendSms(string message, List<string> recipients)
+    private async Task SendSms(string subject, string message, List<string> recipients)
     {
         if (_smsService != null)
         {
-            var smsRecipients = await _smsService.SendMessageAsync(message, [.. recipients]);
+            var smsRecipients = await _smsService.SendMessageAsync(subject, message, [.. recipients]);
 
             var results = smsRecipients
             .Select(r => {
                 Enum.TryParse<SendStatus>(r.State, true, out var status);
-                var contact = _payload.Contacts.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
+                var contact = _payload.ContactPool.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
                 return contact is null ? null : new ContactSendStatus {
                     TransmissionType = TransmissionType.SMS,
                     Contact = contact,
