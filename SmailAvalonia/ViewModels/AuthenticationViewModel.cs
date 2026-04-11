@@ -6,6 +6,7 @@ using Core.Models;
 using Core.Services;
 using Avalonia.Controls;
 using SmailAvalonia.Views;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -56,11 +57,8 @@ public class AuthenticationViewModel : ViewModelBase
         (
             Skip
         );
-    }
 
-    public async Task InitializeDataAsync()
-    {
-        await Task.CompletedTask;
+        Messenger.Subscribe(Globals.ManualInputRequired, _ => { CanApply = true; });
     }
 
     private Task<EmailService>? loginTask = null;
@@ -123,7 +121,6 @@ public class AuthenticationViewModel : ViewModelBase
         {
             if (loginTask == null || loginTask.IsCompleted)
             {
-                CanApply = true;
                 loginTask = emailInput.ConfirmLoginAsync();
                 serviceInMaking = await loginTask;
             }

@@ -1,157 +1,135 @@
 using System;
-using System.Text.Json;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using ClosedXML.Excel;
+using CsvHelper;
+using CsvHelper.Configuration;
 using Core.Models;
 
 namespace Core;
 
 public static class ImportController
 {
-    public static async Task<List<Contact>> FileContentToContactListAsync(Stream stream, string extension, bool header = true)
-    {
-        if (extension == ".csv") return await ReadFromCsvContentAsync(stream, header);
-        else if (extension == ".xlsx" || extension == ".xls") return await ReadFromXlsXContent(stream, header);
+    private static readonly string[] RequiredHeaders = 
+        { "Name", "MobileNumber", "Email", "HomeCountry", "HomeRegion", "SentBy", "PayedBy", "ContactPreference" };
 
-        return [];
+    public static async Task<List<Contact>> FileContentToContactListAsync(Stream stream, string extension, bool hasHeader = true)
+    {
+        return extension.ToLower() switch
+        {
+            ".csv" => await ReadFromCsvContentAsync(stream, hasHeader),
+            ".xlsx" or ".xls" => ReadFromXlsxContent(stream, hasHeader),
+            _ => []
+        };
     }
 
     public static async Task<List<Contact>> ReadFromCsvContentAsync(Stream stream, bool hasHeader)
     {
-        using var streamReader = new StreamReader(stream);
-        var fileContent = await streamReader.ReadToEndAsync();
-
-        var lines = fileContent
-            .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .ToList();
-
-        if (lines.Count == 0) return [];
-
-        // 1. Identify Header Mappings
-        var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        int dataStartIndex = 0;
-
-        if (hasHeader)
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
-            var headers = lines[0].Split(',');
-            for (int i = 0; i < headers.Length; i++)
-            {
-                headerMap[headers[i].Replace(" ", "").ToLower()] = i;
-            }
-            dataStartIndex = 1;
-        }
-        else
-        {
-            // Default mapping if no header: assume 0=Name, 1=Mobile, 2=Email
-            headerMap["name"] = 0;
-            headerMap["mobilenumber"] = 1;
-            headerMap["email"] = 2;
-            headerMap["homeRegion"] = 3;
-            headerMap["contactpreference"] = 4;
-        }
+            HasHeaderRecord = hasHeader,
+            MissingFieldFound = null,
+            HeaderValidated = null,
+            PrepareHeaderForMatch = args => args.Header.Replace(" ", "").ToLower()
+        };
 
-        // Helper to safely get value by header name
-        string GetVal(string[] parts, string columnName) =>
-            headerMap.TryGetValue(columnName, out int index) && index < parts.Length 
-                ? parts[index].Trim() 
-                : string.Empty;
-
-        // 2. Process Data
-        return lines
-            .Skip(dataStartIndex)
-            .Select(line => line.Split(','))
-            .Select(parts => {
-                var name = GetVal(parts, "name");
-                var mobile = GetVal(parts, "mobilenumber");
-                var email = GetVal(parts, "email");
-                var homeRegion = GetVal(parts, "homeregion");
-                var contactPreference = GetVal(parts, "contactpreference");
-
-                return new Contact
-                {
-                    Name = name,
-                    MobileNumber = FormatChecker.IsValidMobile(mobile) ? mobile : string.Empty,
-                    Email = FormatChecker.IsValidEmail(email) ? email : string.Empty,
-                    HomeRegion = homeRegion,
-                    ContactPreference = Enum.TryParse<TransmissionType>(contactPreference, ignoreCase: true, out var pref) 
-                                        ? pref 
-                                        : TransmissionType.NONE
-                };
-            })
-            .Where(c => !string.IsNullOrEmpty(c.Name)) // Ensure 'required' Name is present
-            .ToList();
-    }
-
-    public static async Task<List<Contact>> ReadFromXlsXContent(Stream stream, bool hasHeader)
-    {
-        using var memStream = new MemoryStream();
-        await stream.CopyToAsync(memStream);
-        memStream.Position = 0;
+        using var reader = new StreamReader(stream);
+        using var csv = new CsvReader(reader, config);
 
         var contacts = new List<Contact>();
 
-        using (var workbook = new XLWorkbook(memStream))
+        if (hasHeader)
         {
-            var ws = workbook.Worksheets.First();
-            var rows = ws.RowsUsed();
-            if (!rows.Any()) return contacts;
+            await csv.ReadAsync();
+            csv.ReadHeader();
+        }
 
-            // 1. Map Headers to Column Numbers
-            var headerMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var firstRow = ws.FirstRowUsed();
-            
-            if (hasHeader)
-            {
-                foreach (var cell in firstRow.CellsUsed())
-                {
-                    headerMap[cell.GetValue<string>().Replace(" ", "")] = cell.Address.ColumnNumber;
-                }
-            }
-            else
-            {
-                // Default mapping if no headers exist
-                headerMap["Name"] = 1;
-                headerMap["MobileNumber"] = 2;
-                headerMap["Email"] = 3;
-                headerMap["HomeRegion"] = 4;
-                headerMap["ContactPreference"] = 5;
-            }
+        while (await csv.ReadAsync())
+        {
+            var contact = MapToContact(headerName => 
+                hasHeader ? csv.GetField(headerName) : GetFieldByIndex(csv, headerName));
 
-            // Helper to safely get cell value by header name
-            string GetCellValue(IXLRow row, string columnName) =>
-                headerMap.TryGetValue(columnName, out int colNum) 
-                    ? row.Cell(colNum).GetValue<string>().Trim() 
-                    : string.Empty;
-
-            // 2. Process Data Rows
-            var dataRows = hasHeader ? rows.Skip(1) : rows;
-
-            foreach (var row in dataRows)
-            {
-                var name = GetCellValue(row, "Name");
-                var mobile = GetCellValue(row, "MobileNumber");
-                var email = GetCellValue(row, "Email");
-                var region = GetCellValue(row, "HomeRegion");
-                var rawPref = GetCellValue(row, "ContactPreference");
-
-                // Ignore rows where the required Name is missing
-                if (string.IsNullOrWhiteSpace(name)) continue;
-
-                contacts.Add(new Contact
-                {
-                    Name = name,
-                    MobileNumber = FormatChecker.IsValidMobile(mobile) ? mobile : string.Empty,
-                    Email = FormatChecker.IsValidEmail(email) ? email : string.Empty,
-                    HomeRegion = region,
-                    // Parse Enum safely
-                    ContactPreference = Enum.TryParse<TransmissionType>(rawPref, true, out var pref) 
-                                        ? pref 
-                                        : TransmissionType.SMS
-                });
-            }
+            if (contact != null) contacts.Add(contact);
         }
 
         return contacts;
     }
+
+    public static List<Contact> ReadFromXlsxContent(Stream stream, bool hasHeader)
+    {
+        using var workbook = new XLWorkbook(stream);
+        var ws = workbook.Worksheets.First();
+        var rows = ws.RowsUsed();
+        if (!rows.Any()) return [];
+
+        var firstRow = ws.FirstRowUsed();
+        var headerMap = InitializeExcelHeaderMap(hasHeader 
+            ? firstRow.CellsUsed().Select(c => c.GetValue<string>()).ToArray() 
+            : null);
+
+        var dataRows = hasHeader ? rows.Skip(1) : rows;
+        var contacts = new List<Contact>();
+
+        foreach (var row in dataRows)
+        {
+            var contact = MapToContact(name => 
+                headerMap.TryGetValue(name, out int col) ? row.Cell(col).GetValue<string>().Trim() : string.Empty);
+            
+            if (contact != null) contacts.Add(contact);
+        }
+
+        return contacts;
+    }
+
+    #region Private Helpers
+
+    private static Contact? MapToContact(Func<string, string?> getValue)
+    {
+        var name = getValue("Name");
+        if (string.IsNullOrWhiteSpace(name)) return null;
+
+        var mobile = getValue("MobileNumber") ?? string.Empty;
+        var email = getValue("Email") ?? string.Empty;
+        var rawPref = getValue("ContactPreference") ?? string.Empty;
+
+        return new Contact
+        {
+            Name = name,
+            MobileNumber = FormatChecker.IsValidMobile(mobile) ? mobile : string.Empty,
+            Email = FormatChecker.IsValidEmail(email) ? email : string.Empty,
+            HomeCountry = getValue("HomeCountry") ?? string.Empty,
+            HomeRegion = getValue("HomeRegion") ?? string.Empty,
+            SentBy = getValue("SentBy") ?? string.Empty,
+            PayedBy = getValue("PayedBy") ?? string.Empty,
+            ContactPreference = Enum.TryParse<TransmissionType>(rawPref, true, out var pref) ? pref : TransmissionType.NONE
+        };
+    }
+
+    private static string? GetFieldByIndex(CsvReader csv, string headerName)
+    {
+        // Matches the index of the header in our static RequiredHeaders array
+        int index = Array.IndexOf(RequiredHeaders, headerName);
+        return index >= 0 ? csv.GetField(index) : null;
+    }
+
+    private static Dictionary<string, int> InitializeExcelHeaderMap(string[]? headers)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        if (headers != null)
+        {
+            for (int i = 0; i < headers.Length; i++)
+                map[headers[i].Replace(" ", "")] = i + 1; // Excel is 1-indexed
+        }
+        else
+        {
+            for (int i = 0; i < RequiredHeaders.Length; i++)
+                map[RequiredHeaders[i]] = i + 1;
+        }
+        return map;
+    }
+
+    #endregion
 }

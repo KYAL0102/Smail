@@ -177,7 +177,6 @@ public class SmsGatewayInputViewModel : ViewModelBase
     {
         try
         {
-            await _securityVault.LoadAsync();
             var whKey = _securityVault.GetWhSigningKey();
             if(string.IsNullOrEmpty(whKey?.Value ?? null)) throw new Exception("Saved sms credentials are not valid. Need to be set...");
         }
@@ -188,6 +187,7 @@ public class SmsGatewayInputViewModel : ViewModelBase
         }
 
         ResetData();
+        await Task.CompletedTask;
     }
 
     public void ChangeLeftOverCredentialVisibility()

@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SmailAvalonia.Views.ContactCreationControl"
+             xmlns:vm="using:SmailAvalonia.ViewModels"
+             x:DataType="vm:ContactCreationViewModel">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
+          Content="Contact Creation" FontWeight="Bold"/>
+    
+    <!--"Name", "MobileNumber", "Email", "HomeCountry", "HomeRegion", "SentBy", "PayedBy", "ContactPreference"-->
+    <Label Grid.Row="1" Grid.Column="0" Content="Name:"/>
+    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Name}"/>
+
+    <Label Grid.Row="2" Grid.Column="0" Content="Mobile-Number:"/>
+    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding MobileNumber}"/>
+
+    <Label Grid.Row="3" Grid.Column="0" Content="Email:"/>
+    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Email}"/>
+
+    <Label Grid.Row="4" Grid.Column="0" Content="Country:"/>
+    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Country}"/>
+
+    <Label Grid.Row="5" Grid.Column="0" Content="Region:"/>
+    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Region}"/>
+
+    <Label Grid.Row="6" Grid.Column="0" Content="Sent by:"/>
+    <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding SentBy}"/>
+
+    <Label Grid.Row="7" Grid.Column="0" Content="Payed by:"/>
+    <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding PayedBy}"/>
+
+    <Label Grid.Row="8" Grid.Column="0" Content="ContactPreference:"/>
+    <ComboBox Grid.Row="8" Grid.Column="1" 
+              ItemsSource="{Binding ContactPreferences}"
+              SelectedItem="{Binding SelectedContactPreference}"
+              HorizontalAlignment="Stretch"/>
+
+    <UniformGrid Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Columns="2">
+      <Button Content="Cancel" HorizontalAlignment="Left" Command="{Binding CancelCommand}"/>
+      <Button Content="Create" HorizontalAlignment="Right" Command="{Binding CreateCommand}"/>
+    </UniformGrid>
+  </Grid>
+</UserControl>

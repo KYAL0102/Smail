@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
 using Core;
@@ -10,6 +11,14 @@ namespace SmailAvalonia.ViewModels;
 public class DataSettingsViewModel : ViewModelBase
 {
     private SecurityVault _securityVault;
+
+    public string RecipientpoolbasePathDescription { get; } = 
+        "The path to an external source of data, which would be used as the base for every new payload. " + 
+        "This can be a local path or an network URI, as long as the structure of the data is correct. " + 
+        "Valid file types are CSV or XLSX with the following headers: Name, MobileNumber, Email, HomeCountry, HomeRegion, SentBy, PayedBy, ContactPreference. " +
+        $"The order of these columns is not important. {Environment.NewLine}" +
+        "In case for external URIs, the URI must lead to a valid GET-URI which returns a JSON. " + 
+        "The needed structure is the same as for the CSV/XLSX path option.";
 
     private bool _editingDataSource = false;
     public bool EditingDataSource
@@ -57,16 +66,20 @@ public class DataSettingsViewModel : ViewModelBase
     {
         _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
 
-        DataSourcePathInput = _securityVault.RecepientBasePath;
+        DataSourcePathInput = _securityVault.RecipientBasePath;
 
         EditSourcePathCommand = new
         (
-            () => ReverseDataSourceEditingState(),
+            () => { EditingDataSource = true; },
             () => !EditingDataSource
         );
         CancelSourcePathEditingCommand = new
         (
-            () => ReverseDataSourceEditingState(),
+            () => 
+            { 
+                EditingDataSource = false; 
+                ResetDataSrcInput();
+            },
             () => EditingDataSource
         );
         ApplySourcePathCommand = new
@@ -86,43 +99,38 @@ public class DataSettingsViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    public void ReverseDataSourceEditingState()
-    {
-        EditingDataSource = !EditingDataSource;
-
-        if(!EditingDataSource) ResetDataSrcInput();
-    }
-
     public void ResetDataSrcInput()
     {
-        DataSourcePathInput = _securityVault.RecepientBasePath;
+        DataSourcePathInput = _securityVault.RecipientBasePath;
     }
 
     public async Task ApplySourcePath()
     {
+        EditingDataSource = false;
         DataSrcErrorMsg = string.Empty;
         var isValid = FormatChecker.GetDataSourceType(DataSourcePathInput) != DataSourceType.INVALID;
 
         if(!isValid && !string.IsNullOrEmpty(DataSourcePathInput))
         {
+            EditingDataSource = true;
             DataSrcErrorMsg = "Input must the either an absolule local path or a valid URL!";
             return;
         }
         else if (!string.IsNullOrEmpty(DataSourcePathInput))
         {
+            //TODO: Implement Thumbprint logic
             (bool success, string reason) = await NetworkManager.VerifySourceAsync(DataSourcePathInput);
 
             if(!success)
             {
+                EditingDataSource = true;
                 DataSrcErrorMsg = reason;
                 return;
             }
         }
 
-        _securityVault.RecepientBasePath = DataSourcePathInput;
+        _securityVault.RecipientBasePath = DataSourcePathInput;
         await _securityVault.SaveToFileAsync();
-
-        ReverseDataSourceEditingState();
     }
 
     public async Task ClearTokenStorageAsync()

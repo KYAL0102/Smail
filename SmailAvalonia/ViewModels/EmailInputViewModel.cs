@@ -8,6 +8,7 @@ using Duende.IdentityModel.OidcClient;
 using SmailAvalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
+using Core;
 
 namespace SmailAvalonia.ViewModels;
 
@@ -178,6 +179,7 @@ public class EmailInputViewModel : ViewModelBase
 
     public async Task<EmailService> ConfirmLoginAsync()
     {
+        IsEmailboxEditable = false;
         ErrorMessage = string.Empty;
         var tokenPackage = _securityVault.GetPackageForEmail(Email);
         var provider = await _providerService.GetServerProviderFromEmailAsync(Email);
@@ -212,6 +214,8 @@ public class EmailInputViewModel : ViewModelBase
                 return new EmailService(tokenPackage, provider);
             }
         }
+
+        Messenger.Publish(new Message{Action=Globals.ManualInputRequired});
 
         var loginResult = await LoginViaOAuth(provider);
 
@@ -248,7 +252,6 @@ public class EmailInputViewModel : ViewModelBase
     private async Task<LoginResult> LoginViaOAuth(Provider provider)
     {
         CanApply = true;
-        IsEmailboxEditable = false;
         ManualUrlInputVisible = true;
         IsManualUrlInputEditable = true;
 

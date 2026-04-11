@@ -12,4 +12,5 @@ public static class Globals
     public static string NavigateToExecutionAction { get; } = "execution";
     public static string NewSessionAction { get; } = "newSession";
     public static string NewRecepientPoolBaseSourcePath { get; } = "sourcePathChanged";
+    public static string ManualInputRequired { get; } = "manualInputRequired";
 }

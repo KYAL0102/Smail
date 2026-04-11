@@ -11,11 +11,13 @@ using Avalonia.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SmailAvalonia.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private readonly SecurityVault _securityVault;
     private readonly Window _window;
     private readonly Task? _serverTask = null;
 
@@ -49,6 +51,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel(Window window, Task? serverTask = null)
     {
+        _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
         _window = window;
         _serverTask = serverTask;
         
@@ -72,6 +75,15 @@ public partial class MainWindowViewModel : ViewModelBase
         if(_serverTask != null) await _serverTask;
         await WsClientService.Instance.ConnectToServerWsHub();
 
+        try
+        {
+            await _securityVault.LoadAsync();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+        }
+
         var dialogWindow = new Window
         {
             Title = "Create new Session",
@@ -90,6 +102,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         CurrentSession = sessionResult;
+        CurrentSession.Payload = await PayloadFactory.CreateMessagePayloadAsync(_securityVault);
         NavigateToRecepientsConfiguration();
     }
 
@@ -131,7 +144,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void NavigateToRecepientsConfiguration()
     {
-        if (CurrentSession != null) CurrentPage = new RecepientConfiguration(CurrentSession);
+        if (CurrentSession != null) CurrentPage = new RecipientConfiguration(_window, CurrentSession);
     }
 
     private void NavigateToPayloadConfiguration()
@@ -147,7 +160,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private async Task NavigateToExecution(object? obj = null)
     {
         if(obj is PayloadExecutionControl control) CurrentPage = control;
-        else if (CurrentSession != null ) 
+        else if (CurrentSession != null && CurrentSession.Payload != null) 
         {
             var executionControl = new PayloadExecutionControl(
                 CurrentSession.Payload.Clone(), 
@@ -159,10 +172,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
             CurrentPage = executionControl;
 
-            await Task.Delay(100);
+            var payload = await PayloadFactory.CreateMessagePayloadAsync(_securityVault);
             Dispatcher.UIThread.Post(() => 
             {
-                CurrentSession.Payload = new();
+                CurrentSession.Payload = payload;
             }, DispatcherPriority.Background);
         }
     }

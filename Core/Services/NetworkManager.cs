@@ -20,12 +20,16 @@ namespace Core.Services;
 
 public static class NetworkManager
 {
-    public static async Task<List<Contact>> FetchFromUriAsync(string uri)
+    public static async Task<List<Contact>> FetchFromUriAsync(string uri, string expectedThumbprint)
     {
-        // Use a handler to bypass SSL certificate errors for local IP testing
-        using var handler = new HttpClientHandler
+        var handler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+            {
+                if (errors == System.Net.Security.SslPolicyErrors.None) return true;
+
+                return cert?.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256) == expectedThumbprint;
+            }
         };
 
         using var client = new HttpClient(handler);
@@ -65,6 +69,8 @@ public static class NetworkManager
 
                     PayedBy = !string.IsNullOrEmpty(dto.PayedBy) ? dto.PayedBy : string.Empty,
 
+                    HomeCountry = dto.HomeCountry ?? "Unknown",
+
                     HomeRegion = dto.HomeRegion ?? "Unknown",
 
                     // Handle the Enum conversion for TransmissionType
@@ -92,6 +98,7 @@ public static class NetworkManager
     public class ParticipantDto
     {
         public string? Email { get; set; }
+        public string? HomeCountry { get; set; }
         public string? HomeRegion { get; set; }
         public string? MobileNumber { get; set; }
         public string? Name { get; set; }
@@ -99,7 +106,9 @@ public static class NetworkManager
         public string? SentBy { get; set; }
         public string? TransmissionType { get; set; }
     }
-    public static async Task<(bool Success, string Message)> VerifySourceAsync(string path)
+
+    private static string? _capturedThumbprint = null;
+    public static async Task<(bool Success, string Message)> VerifySourceAsync(string path, string? expectedThumbprint = null)
     {
         // Case 1: It's a Web URL
         if (path.StartsWith("http"))
@@ -108,13 +117,25 @@ public static class NetworkManager
             {
                 var handler = new HttpClientHandler
                 {
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
+                    {
+                        _capturedThumbprint = cert?.GetCertHashString();
+
+                        if (string.IsNullOrEmpty(expectedThumbprint))
+                            return sslPolicyErrors == System.Net.Security.SslPolicyErrors.None;
+
+                        var cleanExpected = expectedThumbprint.Replace(" ", "").Replace(":", "").ToUpper();
+                        var actualThumbprint = cert?.GetCertHashString()?.ToUpper();
+
+                        return cleanExpected == actualThumbprint;
+                    }
                 };
                 using var client = new HttpClient(handler);
                 // Set a short timeout so the UI doesn't hang forever
                 client.Timeout = TimeSpan.FromSeconds(5); 
 
-                var response = await client.GetAsync(path);
+                var request = new HttpRequestMessage(HttpMethod.Head, path);
+                var response = await client.SendAsync(request);
                 
                 if (!response.IsSuccessStatusCode)
                     return (false, $"Server returned error: {response.StatusCode}");
@@ -129,7 +150,19 @@ public static class NetworkManager
                 
                 return (true, "URL is reachable.");
             }
-            catch (Exception ex) { return (false, $"URL unreachable: {ex.Message}"); }
+            catch (HttpRequestException ex) 
+            { 
+                if(_capturedThumbprint != null)
+                {
+                    //TODO: Ask user if he wants to trust this thumbprint
+                    return (false, $"{ex.Message}");
+                }
+                else return (false, $"URL unreachable: {ex.Message}"); 
+            }
+            catch (Exception ex) 
+            { 
+                return (false, $"URL unreachable: {ex.Message}"); 
+            }
         }
 
         // Case 2: It's a Local File
@@ -141,6 +174,7 @@ public static class NetworkManager
                 return (false, "File does not exist at the specified path.");
         }
     }
+
     // ----------------------------------------------------------------------
     //  PUBLIC ENTRY POINT
     // ----------------------------------------------------------------------

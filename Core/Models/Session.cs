@@ -11,12 +11,10 @@ public class Session
     public SmsService? SmsService { get; set; } = null;
     public EmailService? EmailService { get; set; } = null;
 
-    public MessagePayload Payload { get; set; } = new();
+    public MessagePayload? Payload { get; set; } = null;
 
     public async Task PrepareShutdownAsync()
     {
-        if(SmsService == null || EmailService == null) return;
-
-        await SmsService.DeregisterWebhooksAsync();
+        if(SmsService != null) await SmsService.DeregisterWebhooksAsync();
     }
 }

@@ -17,6 +17,7 @@ using Core.Services;
 using Core.Models;
 using System.Collections.Generic;
 using Microsoft.Extensions.Options;
+using Avalonia.Controls;
 
 namespace SmailAvalonia;
 
@@ -70,6 +71,7 @@ public partial class App : Application
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             desktop.MainWindow = new MainWindow(ApiServer.ReadyTask);
             //var control = new MainWindowViewModel(desktop.MainWindow);
             //desktop.MainWindow.DataContext = control;

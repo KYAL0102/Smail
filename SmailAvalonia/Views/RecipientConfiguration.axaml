@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="SmailAvalonia.Views.RecipientConfiguration"
+             xmlns:vm="using:SmailAvalonia.ViewModels"
+             x:DataType="vm:RecipientConfigurationViewModel">
+  
+  <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+
+    <Label Grid.Row="0" Grid.Column="0" Content="Recipient Pool:"/>
+    <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top">
+      <Button Content="Add Single Customer" Command="{Binding AddSingleContactCommand}"/>
+      <Button Content="Upload from file" Command="{Binding PickFileForImport}"/>
+      <Button Content="Load from Source" Command="{Binding LoadFromSourceCommand}"/>
+      <Button Content="Clear Pool" Command="{Binding ClearPoolCommand}"/>
+    </StackPanel>
+
+    <DataGrid x:Name="baseElement" Grid.Row="2" Grid.Column="0" RowHeight="32" Height="380"
+              AutoGenerateColumns="False" IsReadOnly="True" ItemsSource="{Binding Contacts}" 
+              HeadersVisibility="All"
+              GridLinesVisibility="All">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Name" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.NameColumnWidth}"
+                            Binding="{Binding Name}"/>
+
+        <DataGridTextColumn Header="Mobile-Number" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.MobileColumnWidth}"
+                            Binding="{Binding MobileNumber}"/>
+
+        <DataGridTextColumn Header="Email" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.EmailColumnWidth}"
+                            Binding="{Binding Email}"/>
+
+        <DataGridTextColumn Header="SentBy" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.SentByColumnWidth}"
+                            Binding="{Binding SentBy}"/>
+
+        <DataGridTextColumn Header="PayedBy" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.PayedByColumnWidth}"
+                            Binding="{Binding PayedBy}"/>
+
+        <DataGridTextColumn Header="Home-Country" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.CountryColumnWidth}"
+                            Binding="{Binding HomeCountry}"/>
+
+        <DataGridTextColumn Header="Home-Region" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.RegionColumnWidth}"
+                            Binding="{Binding HomeRegion}"/>
+        
+        <DataGridTextColumn Header="Contact-Preference" MinWidth="0"
+                            Width="{Binding #baseElement.DataContext.PreferenceColumnWidth}"
+                            Binding="{Binding ContactPreference}"/>
+
+        <DataGridTemplateColumn Header="" Width="Auto">
+            <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                    <Button
+                        Content="✕"
+                        Padding="4,0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Command="{Binding #baseElement.DataContext.RemoveContactCommand}"
+                        CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center">
+      <Button Content="← Prev" Command="{Binding PreviousBatchCommand}"/>
+      <Label Content="{Binding BatchPositionLabel}"/>
+      <Button Content="Next →" Command="{Binding NextBatchCommand}"/>
+    </StackPanel>
+
+    <Button Grid.Row="4" Grid.Column="0" Content="Continue" HorizontalAlignment="Right" Command="{Binding ContinueToMessageConfig}"/>
+  </Grid>
+</UserControl>

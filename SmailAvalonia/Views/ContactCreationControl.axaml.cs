@@ -1,17 +1,14 @@
-using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Core.Models;
 using SmailAvalonia.ViewModels;
 
 namespace SmailAvalonia.Views;
 
-public partial class AuthenticationControl : UserControl
+public partial class ContactCreationControl : UserControl
 {
-    private AuthenticationViewModel _viewModel;
-    public AuthenticationControl(Window? window = null)
+    private ContactCreationViewModel _viewModel;
+    public ContactCreationControl(Window window)
     {
         InitializeComponent();
         _viewModel = new(window);

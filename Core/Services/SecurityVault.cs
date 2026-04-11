@@ -21,14 +21,17 @@ public class SecurityVault : IDisposable
     private readonly string? _pwd = null;
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
-    
-    private string _recepientBasePath = string.Empty;
-    public string RecepientBasePath 
+
+    public string HttpsThumbprint { get; set; } = string.Empty;
+    private string _recipientBasePath = string.Empty;
+    public string RecipientBasePath 
     { 
-        get => _recepientBasePath;
+        get => _recipientBasePath;
         set
         {
-            _recepientBasePath = value;
+            _recipientBasePath = value;
+            RecipientPoolBaseLoader.PoolSourcePath = _recipientBasePath;
+            //For the RecepientConfigurationViewModel
             Messenger.Publish(new Message
             {
                 Action = Globals.NewRecepientPoolBaseSourcePath,
@@ -36,6 +39,9 @@ public class SecurityVault : IDisposable
             });
         } 
     }
+
+    public TransmissionType PrimaryTransmissionType { get; set; } = TransmissionType.Email;
+    public TransmissionStrategyKey StrategyKey { get; set; } = TransmissionStrategyKey.FALLBACK;
 
     // EMAIL
     private List<TokenPackage> _tokenPackages = [];
@@ -56,7 +62,10 @@ public class SecurityVault : IDisposable
             WhSigningKey = SecureStringToString(_whSigningKey) ?? string.Empty,
             GatewayUsername = SmsGatewayUsername,
             GatewayPassword = SecureStringToString(_gatewayPassword) ?? string.Empty,
-            RecepientBasePath = RecepientBasePath,
+            HttpsThumbprint = HttpsThumbprint,
+            RecipientBasePath = RecipientBasePath,
+            PrimaryTransmissiontype = (int) PrimaryTransmissionType,
+            StrategyKey = (int) StrategyKey,
             TokenPackages = _tokenPackages
         };
 
@@ -88,9 +97,12 @@ public class SecurityVault : IDisposable
             {
                 _aesPassphrase = StringToSecureString(data.AesPassphrase);
                 _whSigningKey = StringToSecureString(data.WhSigningKey);
-                SmsGatewayUsername = data.GatewayUsername ?? string.Empty;
+                SmsGatewayUsername = data.GatewayUsername ?? SmsGatewayUsername;
                 _gatewayPassword = StringToSecureString(data.GatewayPassword);
-                RecepientBasePath = data.RecepientBasePath ?? string.Empty;
+                HttpsThumbprint = data.HttpsThumbprint;
+                RecipientBasePath = data.RecipientBasePath ?? RecipientBasePath;
+                PrimaryTransmissionType = (TransmissionType)(data.PrimaryTransmissiontype ?? (int)PrimaryTransmissionType);
+                StrategyKey = (TransmissionStrategyKey) (data.StrategyKey ?? (int)StrategyKey);
                 _tokenPackages = data.TokenPackages;
             }
 
