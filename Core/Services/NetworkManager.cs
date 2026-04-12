@@ -201,6 +201,8 @@ public static class NetworkManager
             Console.WriteLine("Certificate is in its final month or expired. Regenerating...");
         }
 
+        ForceClearFolder(workDir);
+
         string newPassword = GenerateRandomPassword();
         
         RunSmsGateCa(ip, workDir);
@@ -210,6 +212,69 @@ public static class NetworkManager
         File.WriteAllText(passwordPath, encryptedText);
 
         return (pfxPath, newPassword);
+    }
+
+    public static void ForceClearFolder(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath);
+            return;
+        }
+
+        var directory = new DirectoryInfo(folderPath);
+        foreach (var file in directory.GetFiles("*", SearchOption.AllDirectories))
+        {
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    file.Attributes = FileAttributes.Normal;
+                }
+                else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                {
+                    Process.Start("chmod", $"644 \"{file.FullName}\"")?.WaitForExit();
+                }
+            }
+            catch { /* File might have been deleted by a parallel process */ }
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(folderPath))
+                {
+                    if (OperatingSystem.IsWindows())
+                    {
+                        string tempName = file + ".bak";
+                        if (File.Exists(tempName)) File.Delete(tempName);
+                        File.Move(file, tempName);
+                        File.Delete(tempName);
+                    }
+                    else
+                    {
+                        File.Delete(file);
+                    }
+                }
+
+                foreach (var dir in Directory.EnumerateDirectories(folderPath))
+                {
+                    Directory.Delete(dir, true);
+                }
+                
+                Console.WriteLine($"Successfully cleared folder {folderPath}!");
+                break; // Success
+            }
+            catch (IOException) when (i < 2)
+            {
+                Thread.Sleep(500); 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not fully clear folder: {ex.Message}");
+            }
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -231,14 +296,18 @@ public static class NetworkManager
         return fullPath;
     }
 
-    public static string GetCertWorkDirectory()
+    public static string GetWorkDirPath()
     {
-        string networkId = GetNetworkId();
-
-        string rootDataFolder = Path.Combine(
+        return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Smail"
         );
+    }
+
+    public static string GetCertWorkDirectory()
+    {
+        string networkId = GetNetworkId();
+        string rootDataFolder = GetWorkDirPath();
 
         string folder = Path.Combine(
             rootDataFolder,
@@ -340,14 +409,46 @@ public static class NetworkManager
     public static void RunSmsGateCa(string ip, string workDir)
     {
         string binaryPath = GetSmsGateBinaryPath();
+        string binaryName = Path.GetFileNameWithoutExtension(binaryPath);
 
         string crt = Path.Combine(workDir, "server.crt");
         string key = Path.Combine(workDir, "server.key");
 
+        try 
+        {
+            var existingProcesses = Process.GetProcessesByName(binaryName);
+            foreach (var p in existingProcesses)
+            {
+                Console.WriteLine($"Killing process {p.SessionId}.");
+                p.Kill();
+                p.WaitForExit(2000);
+            }
+        }
+        catch(Exception ex) { Console.WriteLine($"{ex.Message} - {ex.StackTrace}"); }
+
         try
         {
-            if (File.Exists(crt)) File.Delete(crt);
-            if (File.Exists(key)) File.Delete(key);
+            for (int i = 0; i < 3; i++)
+            {
+                try 
+                {
+                    if (File.Exists(crt)) 
+                    {
+                        File.SetAttributes(crt, FileAttributes.Normal);
+                        File.Delete(crt);
+                    }
+                    if (File.Exists(key))
+                    {
+                        File.SetAttributes(key, FileAttributes.Normal);
+                        File.Delete(key);
+                    }
+                    break; 
+                }
+                catch (IOException) when (i < 2) 
+                {
+                    Thread.Sleep(500);
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -71,7 +71,7 @@ public class SecurityVault : IDisposable
 
         string json = JsonSerializer.Serialize(data);
         string encrypted = AesEncryptor.Encrypt(json, _pwd);
-        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), FileName);
+        var path = Path.Combine(NetworkManager.GetWorkDirPath(), FileName);
         await File.WriteAllTextAsync(path, encrypted);
     }
 
