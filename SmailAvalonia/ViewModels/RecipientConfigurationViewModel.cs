@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -61,6 +62,15 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
     [ObservableProperty] private DataGridLength _countryColumnWidth = new(0);
     [ObservableProperty] private DataGridLength _regionColumnWidth = new(0);
     [ObservableProperty] private DataGridLength _preferenceColumnWidth = new(0);
+
+    public string SortMemberPath_Name { get; } = "Name";
+    public string SortMemberPath_MobileNumber { get; } = "MobileNumber";
+    public string SortMemberPath_Email { get; } = "Email";
+    public string SortMemberPath_Country { get; } = "Country";
+    public string SortMemberPath_Region { get; } = "Region";
+    public string SortMemberPath_SentBy { get; } = "SentBy";
+    public string SortMemberPath_PayedBy { get; } = "PayedBy";
+    public string SortMemberPath_ContactPreference { get; } = "ContactPreference";
     private bool _isDataSourceSet = false;
     public bool IsDataSourcSet
     {
