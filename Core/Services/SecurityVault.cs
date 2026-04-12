@@ -11,7 +11,7 @@ namespace Core.Services;
 
 public class SecurityVault : IDisposable
 {
-    private const string FileName = "vault.data";
+    private string FilePath => Path.Combine(NetworkManager.GetWorkDirPath(), "vault.data");
     private bool _loaded = false;
 
     // SMS
@@ -71,8 +71,7 @@ public class SecurityVault : IDisposable
 
         string json = JsonSerializer.Serialize(data);
         string encrypted = AesEncryptor.Encrypt(json, _pwd);
-        var path = Path.Combine(NetworkManager.GetWorkDirPath(), FileName);
-        await File.WriteAllTextAsync(path, encrypted);
+        await File.WriteAllTextAsync(FilePath, encrypted);
     }
 
     public async Task LoadAsync()
@@ -80,14 +79,12 @@ public class SecurityVault : IDisposable
         if (_pwd == null || _loaded) return;
         //if (_aesPassphrase != null || _gatewayPassword != null) return;
 
-        var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), FileName);
-
-        if (!File.Exists(filePath))
+        if (!File.Exists(FilePath))
             throw new FileNotFoundException("Vault file missing and no data in memory.");
 
         try
         {
-            string encrypted = await File.ReadAllTextAsync(filePath);
+            string encrypted = await File.ReadAllTextAsync(FilePath);
             string? json = AesEncryptor.Decrypt(encrypted, _pwd);
             
             if (string.IsNullOrEmpty(json)) throw new Exception("Decryption failed or data corrupted.");
