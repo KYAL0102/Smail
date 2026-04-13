@@ -15,6 +15,10 @@ namespace Core.Services;
 
 public class EmailService
 {
+    private const int MSG_DELAY_MIN_MS = 10000;
+    private const int MSG_DELAY_MAX_MS = 30000;
+    private const int BATCH = 10;
+    private const int BATCH_DELAY_MIN = 15;
     public TokenPackage TokenPackage { get; private set; }
     private readonly Provider _emailProvider;
 
@@ -27,25 +31,71 @@ public class EmailService
     private static readonly Random _random = new ();
     private static readonly SemaphoreSlim _semaphore = new (5);
     
-    public List<Task<ContactSendStatus>> SendMessageToEmails(string message, string subject, List<Core.Models.Contact> contacts)
+    public async Task SendMessageToEmails(string message, string subject, List<Core.Models.Contact> contacts)
     {
         var email = TokenPackage.Email;
         var fromGoogleEmail = !string.IsNullOrEmpty(email) ? email : "me@gmail.com";
 
-        return contacts.Select(contact => ExecuteSendTask(contact, () => 
+        var credential = GoogleCredential.FromAccessToken(TokenPackage.AccessToken);
+        var service = new GmailService(new BaseClientService.Initializer {
+            HttpClientInitializer = credential,
+            ApplicationName = "Smail-Personal"
+        });
+
+        var counter = 0;
+
+        foreach(var contact in contacts)
         {
-            return _emailProvider.Name switch
+            try
             {
-                "Google" => Task.Run(async () => 
+                if(_emailProvider.Name == "Google")
+                {
+                    counter++;
+
+                    int delay = _random.Next(MSG_DELAY_MIN_MS, MSG_DELAY_MAX_MS);
+                    await Task.Delay(delay);
+
+                    var name = TokenPackage.Name;
+                    if(string.IsNullOrEmpty(name)) name = await GetFullNameFromGoogleAccessTokenAsync(TokenPackage.AccessToken);
+                    await SendGmailAsync(service, name, fromGoogleEmail, contact, subject, message);
+
+                    if (counter % BATCH == 0 && counter > 0) 
                     {
-                        var name = TokenPackage.Name;
-                        if(string.IsNullOrEmpty(name)) name = await GetFullNameFromGoogleAccessTokenAsync(TokenPackage.AccessToken);
-                        await SendGmailAsync(TokenPackage.AccessToken, name, fromGoogleEmail, contact, subject, message);
-                    }),
-                "Microsoft" => SendOutlookAsync(TokenPackage.AccessToken, contact, subject, message),
-                _ => throw new NotSupportedException($"Provider {_emailProvider.Name} not supported")
-            };
-        })).ToList();
+                        Console.WriteLine($"Batch of {BATCH} reached ({counter}). Pausing for {BATCH_DELAY_MIN} minutes...");
+                        await Task.Delay(TimeSpan.FromMinutes(BATCH_DELAY_MIN));
+                    }
+
+                    Console.WriteLine("Publishing status...");
+                    Messenger.Publish(new Models.Message
+                    {
+                        Action = Globals.EmailContactStateUpdate,
+                        Data = new ContactSendStatus
+                        {
+                            TransmissionType = TransmissionType.Email,
+                            Contact = contact,
+                            Status = SendStatus.SENT
+                        }
+                    });
+                }
+                else if(_emailProvider.Name == "Microsoft") continue; //TODO
+                else throw new NotSupportedException($"Provider {_emailProvider.Name} not supported");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"Error for {contact.Email} -> {ex.Message}");
+                Messenger.Publish(new Models.Message
+                {
+                    Action = Globals.EmailContactStateUpdate,
+                    Data = new ContactSendStatus
+                    {
+                        TransmissionType = TransmissionType.Email,
+                        Contact = contact,
+                        Status = SendStatus.FAILED,
+                        Details = ex.Message
+                    }
+                });
+            }
+        }
     }
 
     public static async Task<string> GetFullNameFromGoogleAccessTokenAsync(string accessToken)
@@ -70,44 +120,12 @@ public class EmailService
         }
         return fullName;
     }
-    
-    private static async Task<ContactSendStatus> ExecuteSendTask(Models.Contact contact, Func<Task> sendAction)
+
+    private static async Task SendGmailAsync(GmailService service, string fullName, string email, Models.Contact to, string subject, string body)
     {
-        await _semaphore.WaitAsync();
-        try
-        {
-            int delay = _random.Next(500, 2000);
-            await Task.Delay(delay);
-
-            await sendAction();
-            return new ContactSendStatus
-            {
-                TransmissionType = TransmissionType.Email,
-                Contact = contact,
-                Status = SendStatus.SENT
-            };
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error for {contact.Email} -> {ex.Message}");
-            return new ContactSendStatus
-            {
-                TransmissionType = TransmissionType.Email,
-                Contact = contact,
-                Status = SendStatus.FAILED
-            };
-        }
-    }
-
-    private static async Task SendGmailAsync(string accessToken, string fullName, string email, Models.Contact to, string subject, string body)
-    {
-        var credential = GoogleCredential.FromAccessToken(accessToken);
-        var service = new GmailService(new BaseClientService.Initializer {
-            HttpClientInitializer = credential,
-            ApplicationName = "Smail-Personal"
-        });
-
         var mimeMessage = new MimeKit.MimeMessage();
+        mimeMessage.Headers.Add("Precedence", "bulk");
+        mimeMessage.Headers.Add("X-Auto-Response-Suppress", "All");
         mimeMessage.From.Add(new MailboxAddress(fullName, email)); 
         mimeMessage.To.Add(new MailboxAddress(to.Name, to.Email));
         mimeMessage.Subject = subject;

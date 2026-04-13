@@ -14,7 +14,7 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
     <Grid.ColumnDefinitions>
@@ -22,9 +22,13 @@
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
-    <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="Status Tracking"/>
+    <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+          HorizontalAlignment="Center" FontWeight="Bold"
+          Content="Status Tracking"/>
 
-    <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding SmsContactStates}">
+    <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding SmsContactStates}"
+            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+            ScrollViewer.VerticalScrollBarVisibility="Auto">
       <ListBox.ItemTemplate>
         <DataTemplate>
           <Expander ExpandDirection="Down" Margin="4,2" HorizontalAlignment="Stretch">
@@ -103,7 +107,10 @@
       </ListBox.ItemTemplate>
     </ListBox>
 
-    <ListBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding EmailContactStates}">
+    <ListBox Grid.Row="1" Grid.Column="1" 
+            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+            ScrollViewer.VerticalScrollBarVisibility="Auto"
+            ItemsSource="{Binding EmailContactStates}">
       <ListBox.ItemTemplate>
         <DataTemplate>
           <Expander ExpandDirection="Down" Margin="4,2" HorizontalAlignment="Stretch">

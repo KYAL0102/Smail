@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 using Core;
 using Core.Models;
@@ -10,6 +13,7 @@ namespace SmailAvalonia.ViewModels;
 
 public class DataSettingsViewModel : ViewModelBase
 {
+    private UserControl _userControl;
     private SecurityVault _securityVault;
 
     public string RecipientpoolbasePathDescription { get; } = 
@@ -31,6 +35,7 @@ public class DataSettingsViewModel : ViewModelBase
             EditSourcePathCommand.NotifyCanExecuteChanged();
             ApplySourcePathCommand.NotifyCanExecuteChanged();
             CancelSourcePathEditingCommand.NotifyCanExecuteChanged();
+            PickFromLocalCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -61,9 +66,11 @@ public class DataSettingsViewModel : ViewModelBase
     public RelayCommand ApplySourcePathCommand { get; set; }
     public RelayCommand ClearStorageCommand { get; set; }
     public RelayCommand ResetApplicationCommand { get; set; }
+    public RelayCommand PickFromLocalCommand { get; set; }
 
-    public DataSettingsViewModel()
+    public DataSettingsViewModel(UserControl userControl)
     {
+        _userControl = userControl;
         _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
 
         DataSourcePathInput = _securityVault.RecipientBasePath;
@@ -84,12 +91,16 @@ public class DataSettingsViewModel : ViewModelBase
         );
         ApplySourcePathCommand = new
         (
-            async () => await ApplySourcePath(),
+            async () => await ApplySourcePathAsync(),
             () => EditingDataSource
         );
         ClearStorageCommand = new
         (
             async () => await ClearTokenStorageAsync()
+        );
+        PickFromLocalCommand = new(
+            async () => await PickLocalFileForPoolSource(),
+            () => EditingDataSource
         );
         ResetApplicationCommand = new(ResetApplication);
     }
@@ -99,12 +110,56 @@ public class DataSettingsViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
+    private async Task PickLocalFileForPoolSource()
+    {
+        try
+        {
+            var topLevel = TopLevel.GetTopLevel(_userControl);
+
+            // Start async operation to open the dialog.
+            var files = await topLevel!.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open Csv or Excel File",
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType>
+                {
+                    new("CSV and Excel Files")
+                    {
+                        Patterns = new[] { "*.csv", "*.xlsx", "*.xls" },
+                        MimeTypes = new[]
+                        {
+                            "text/csv",
+                            "application/vnd.ms-excel",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        }
+                    },
+                    new("All Files")
+                    {
+                        Patterns = new[] { "*.*" }
+                    }
+                }
+            });
+
+            if (files.Count >= 1)
+            {
+                // Open reading stream from the first file.
+                var filePath = files[0].Path.AbsolutePath;
+                DataSourcePathInput = filePath;
+                await ApplySourcePathAsync();
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+        }
+    }
+
     public void ResetDataSrcInput()
     {
         DataSourcePathInput = _securityVault.RecipientBasePath;
     }
 
-    public async Task ApplySourcePath()
+    public async Task ApplySourcePathAsync()
     {
         EditingDataSource = false;
         DataSrcErrorMsg = string.Empty;

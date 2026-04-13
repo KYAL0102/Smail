@@ -75,7 +75,7 @@ This application is designed to be lightweight and portable. It does not require
 
 5. Right after you started Smail, a window will appear which tells you to register with the SMS- & Email-Authorities.
 
-6. For the SMS-Gateway, state these credentials from the app into the PC, and press ```Enter```:
+6. For the SMS-Gateway:
 
     | Smail | Phone |
     | :--- | :--- |
@@ -107,7 +107,15 @@ This application is designed to be lightweight and portable. It does not require
         <img src="ReadmeImages/settings_wh1.jpg" Width="300px" Width="Auto"/>
     </div>
 
-7. Sign into your email account by entering your address and completing the OAuth
+7. Type these credentials into the input fields and click ```Confirm``` or simply press ```Enter```.
+
+    <div align="center">
+        <img src="ReadmeImages/smsgatewayinput.png" Height="100%" Width="Auto" MaxWidth="300"/>
+    </div>
+
+6. If you are going to sent more than 50 people messages, it is adviced that you implement certain delays to your SMS-Gateway App. I recommend using a 5 to 10 second delay for each message and a limit of 3 messages per minute. You can set them in the app at **Settings -> Messages...**
+
+7. Then sign into your email account by entering your address and completing the OAuth. In case your Browser ends up showing you a **'Could not connect'-Message**, simply **copy the URL** of the browser into the input, which should have appeared, and continue by again either clicking ```Confirm``` or pressing ```Enter```.
 
 8. Now you can start using Smail :D but if you want to change your Login data, you can do that in the ```Settings```
 

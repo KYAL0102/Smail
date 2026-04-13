@@ -6,8 +6,9 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SmailAvalonia.Views.MessageConfigurationControl"
              x:DataType="vm:MessageConfigurationViewModel">
-  <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+  <Grid HorizontalAlignment="Stretch" VerticalAlignment="Top">
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -18,16 +19,20 @@
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
-    <Label Grid.Row="0" Content="Subject:"/>
-    <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding Subject, Mode=TwoWay}"
+    <Label Grid.Row="0" Grid.Column="0"
+          HorizontalAlignment="Center" FontWeight="Bold"
+          Content="Message-Configuration"/>
+
+    <Label Grid.Row="1" Content="Subject:"/>
+    <TextBox Grid.Row="2" Grid.Column="0" Text="{Binding Subject, Mode=TwoWay}"
              Watermark="The title of your message" MaxLength="60"/>
 
-    <Label Grid.Row="2" Content="Message-Body:"/>
-    <TextBox Grid.Row="3" Grid.Column="0" Height="200" Text="{Binding Message, Mode=TwoWay}"
+    <Label Grid.Row="3" Content="Message-Body:"/>
+    <TextBox Grid.Row="4" Grid.Column="0" Height="200" Text="{Binding Message, Mode=TwoWay}"
              Watermark="Write your message content here!"
              AcceptsReturn="True" TextWrapping="Wrap"/>
     
-    <UniformGrid Grid.Row="4" Grid.Column="0" Columns="2">
+    <UniformGrid Grid.Row="5" Grid.Column="0" Columns="2">
       <Button Content="Back" HorizontalAlignment="Left" Command="{Binding OneStepBack}"/>
       <Button Content="Continue" HorizontalAlignment="Right" Command="{Binding ContinueToSummaryCommand}"/>
     </UniformGrid>

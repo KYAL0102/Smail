@@ -6,12 +6,14 @@ using Core.Models;
 using Core.Services;
 using Avalonia.Controls;
 using SmailAvalonia.Views;
-using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace SmailAvalonia.ViewModels;
 
 public class AuthenticationViewModel : ViewModelBase
 {
+    private const string HELP_URL = "https://github.com/KYAL0102/Smail#usage";
     private readonly Window? _window = null;
 
     private UserControl _currentControl = new SmsGatewayInput(false, false);
@@ -42,6 +44,8 @@ public class AuthenticationViewModel : ViewModelBase
     public RelayCommand ApplyDataCommand { get; init; }
     public RelayCommand ResetCommand { get; init; }
     public RelayCommand SkipCommand { get; init; }
+    public RelayCommand NavigateToHelpCommand {get; init; }
+
     public AuthenticationViewModel(Window? window = null)
     {
         _window = window;
@@ -49,6 +53,8 @@ public class AuthenticationViewModel : ViewModelBase
             async() => await ApplyDataAsync(),
             () => CanApply
         );
+
+        NavigateToHelpCommand = new(OpenHelpSite);
         ResetCommand = new
         (
             ResetInput
@@ -142,5 +148,43 @@ public class AuthenticationViewModel : ViewModelBase
         _sessionInMaking.EmailService = serviceInMaking;
 
         return true;
+    }
+
+    public void OpenHelpSite()
+    {
+        if (string.IsNullOrWhiteSpace(HELP_URL) || !HELP_URL.StartsWith("http"))
+        {
+            throw new ArgumentException("Invalid URL. Must start with http or https.");
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = HELP_URL,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var escapedUrl = HELP_URL.Replace("&", "^&");
+                Process.Start(new ProcessStartInfo("cmd", $"/c start {escapedUrl}") { CreateNoWindow = true });
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", HELP_URL);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", HELP_URL);
+            }
+            else
+            {
+                Debug.WriteLine($"Failed to open URL: {ex.Message}");
+                throw;
+            }
+        }
     }
 }

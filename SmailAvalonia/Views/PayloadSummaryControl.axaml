@@ -6,7 +6,7 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="SmailAvalonia.Views.PayloadSummaryControl"
              x:DataType="vm:PayloadSummaryViewModel">
-  <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+  <Grid HorizontalAlignment="Stretch" VerticalAlignment="Top">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -25,7 +25,9 @@
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
-    <Label Grid.Row="0" Grid.Column="0" Content="Summary" HorizontalAlignment="Center"/>
+    <Label Grid.Row="0" Grid.Column="0" 
+          HorizontalAlignment="Center" FontWeight="Bold"
+          Content="Summary"/>
 
     <Label Grid.Row="1" Grid.Column="0" Content="Subject:"/>
     <Border Grid.Row="2" Grid.Column="0" BorderBrush="White" BorderThickness="1" CornerRadius="5">

@@ -14,6 +14,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
     <ContentControl Grid.Row="0" Content="{Binding CurrentControl}"/>
@@ -26,5 +27,25 @@
       <Button Content="Skip" HorizontalAlignment="Right"
               Command="{Binding SkipCommand}"/>
     </StackPanel>
+
+    <Button Grid.Row="2"
+            Command="{Binding NavigateToHelpCommand}"
+            Background="Transparent"
+            BorderThickness="0"
+            Padding="0"
+            Foreground="Gray"
+            Cursor="Hand"
+            VerticalAlignment="Bottom"
+            HorizontalAlignment="Right"
+            Margin="5">
+        <Button.Styles>
+            <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="DarkGray" />
+            </Style>
+        </Button.Styles>
+        <TextBlock Text="Need help?"
+                  TextDecorations="Underline"/>
+    </Button>
   </Grid>
 </UserControl>

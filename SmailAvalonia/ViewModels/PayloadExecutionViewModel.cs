@@ -45,6 +45,7 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     public async Task ExecuteMessages()
     {
+        Messenger.Subscribe(Globals.EmailContactStateUpdate, msg => HandleEmailContactStateUpdate(msg.Data));
         RegisterToWebsocketEvent();
 
         var emailContacts = _payload.ContactPool
@@ -61,8 +62,6 @@ public class PayloadExecutionViewModel: ViewModelBase
         
         var message = _payload.Message;
         var subject = _payload.Subject; 
-
-        Console.WriteLine($"Subject: {subject.Length} and Message: {message.Length}");
 
         var smsTask = SendSms(subject, message, smsContacts);
         var emailTask = SendEmails(subject, message, emailContacts);
@@ -109,50 +108,33 @@ public class PayloadExecutionViewModel: ViewModelBase
     {
         if (_emailService != null)
         {
-            var tasks = _emailService.SendMessageToEmails(message, subject, contacts);
+            contacts
+                .Select(contact => new ContactSendStatus
+                {
+                    TransmissionType = TransmissionType.Email,
+                    Contact = contact,
+                    Status = SendStatus.PENDING
+                })
+                .ToList()
+                .ForEach(EmailContactStates.Add);
+            await _emailService.SendMessageToEmails(message, subject, contacts);
 
-            Dispatcher.UIThread.Post(() => {
-                contacts
-                    .Select(contact => new ContactSendStatus
-                    {
-                        TransmissionType = TransmissionType.Email,
-                        Contact = contact,
-                        Status = SendStatus.PENDING
-                    })
-                    .ToList()
-                    .ForEach(EmailContactStates.Add);
-            });
-
-            await MonitorEmailProgress(tasks);
-
-            Console.WriteLine("Emails sent.");
+            Console.WriteLine("All emails sent!");
         }
-        else Console.WriteLine("Could not send Email (EmailService was null.)");
+        else Console.WriteLine("Could not send Emails (EmailService was null.)");
     }
 
-    public async Task MonitorEmailProgress(List<Task<ContactSendStatus>> tasks)
+    private void HandleEmailContactStateUpdate(object? obj)
     {
-        var remainingTasks = tasks.ToList();
-
-        while (remainingTasks.Count != 0)
+        Console.WriteLine("Update received!");
+        if(obj is ContactSendStatus status)
         {
-            Task<ContactSendStatus> completedTask = await Task.WhenAny(remainingTasks);
-
-            remainingTasks.Remove(completedTask);
-
-            try
+            Dispatcher.UIThread.Post(() => 
             {
-                ContactSendStatus result = await completedTask;
-
-                Dispatcher.UIThread.Post(() => {
-                    var statusInList = EmailContactStates.SingleOrDefault(c => c.Contact == result.Contact);
-                    if(statusInList != null) statusInList.Status = SendStatus.SENT;
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+                var item = EmailContactStates.SingleOrDefault(cs => cs.Contact == status.Contact);
+                if(item != null) item.Status = status.Status;
+                else Console.WriteLine($"Could not find item in list of emailContactstates!");
+            });
         }
     }
 

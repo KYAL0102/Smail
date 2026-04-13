@@ -12,7 +12,7 @@ public partial class DataSettingsControl : UserControl
     public DataSettingsControl()
     {
         InitializeComponent();
-        _viewModel = new();
+        _viewModel = new(this);
         DataContext = _viewModel;
         
         Loaded += UserControl_Loaded;
