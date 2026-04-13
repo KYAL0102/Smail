@@ -1,7 +1,7 @@
 # SMail
 
 <div align="center">
-  <img src="Smail.png" Height="300px" Width="Auto"/>
+  <img src="ReadmeImages/Smail.png" Height="300px" Width="Auto"/>
 
   Reach your audience instantly by sending unified messages across SMS and Email from a single desktop interface.
 </div>
@@ -12,11 +12,13 @@
 
 * **Import of recepients** (```.csv```, ```.xlsx```): Next to an individual input, you also can import your contacts via a list.
 
+* **Automatic Import**: You can add a Source-Path in the **Settings** under **Data**, which will be used as a base for the Recipient-Pool of every new payload. It also can manually be loaded via button. The source can be a local file or a external API. It will work, as long as the necessary structure is valid.
+
 * **Local-Network Sync**: Send SMS via a companion mobile app without requiring an internet connection. Both devices simply need to be on the same Wi-Fi network.
 
 * **End-to-End Encryption**: Secure your communication with a custom Common Password system. Messages are encrypted on your desktop and decrypted only on your mobile device.
 
-* **Modern Authentication**: Full support for Google (Gmail) and Microsoft (Outlook/Office 365) using secure OAuth2 protocols. No need to store "Less Secure App" passwords.
+* **Modern Authentication**: Full support for Google (Gmail) using secure OAuth2 protocols. No need to store "Less Secure App" passwords. Support for Microsoft (Outlook/Office 365) is planned.
 
 * **Live Status Tracking**: Monitor your message flow in real-time with a unified dashboard.
 
@@ -65,20 +67,47 @@ This application is designed to be lightweight and portable. It does not require
 
 3. In the SMS-Gateway App, turn on the ```Local Server```.
 
+<div align="center">
+  <img src="ReadmeImages/homescreen1.jpg" Width="200px" Width="Auto"/>
+</div>
+
 4. The first time you start Smail, you need **access to the internet** as it registers certificates in the background.
 
 5. Right after you started Smail, a window will appear which tells you to register with the SMS- & Email-Authorities.
 
 6. For the SMS-Gateway, state these credentials from the app into the PC, and press ```Enter```:
 
-    | Phone | Smail |
+    | Smail | Phone |
     | :--- | :--- |
-    | Home -> Local address | Domain |
-    | Home -> Username | Username |
-    | Home -> Password | Password |
-    | Settings -> Webhooks -> Signing Key | Webhook Signing Key |
+    | ```Domain``` | Home -> Local address |
+    | ```Username``` | Home -> Username |
+    | ```Password``` | Home -> Password |
+    | ```Webhook Signing Key``` | Settings -> Webhooks -> Signing Key |
+    | ```Encryption Passphrase``` | Settings -> Passphrase |
 
-7. Sign into your email account by entering your address and completing the OAuth (Google or Microsoft)
+    - The ```Domain```, as well as the ```Username``` and the ```Password``` can be found in the **Home-Tab**. If you want to change them, then go into the **Settings-Tab**, then **Local Server**.
+    <div align="center">
+        <img src="ReadmeImages/homescreen2.jpg" Width="300px" Width="Auto"/>
+    </div>
+
+    - To set the ```Passphrase```, you just need to go to the **Settings-Tab** and tab on it to set a new Passphrase. This is optional, so you can leave it empty. 
+    You do not have to set it everytime ;)
+    <div align="center">
+        <img src="ReadmeImages/settings2.jpg" Width="300px" Width="Auto"/>
+    </div>
+
+    - To find the ```Webhook Signing Key``` you need to navigate into **Webhook-Section** in the **Settings-Tag**. There you can get your Signing Key and if you want you can set a custom one. Just do not leave it empty, as it will generate a new random one. 
+    <div align="center">
+        <img src="ReadmeImages/settings1.jpg" Width="300px" Width="Auto"/>
+        <img src="ReadmeImages/settings_wh2.jpg" Width="300px" Width="Auto"/>
+    </div>
+
+    - **Optional:** Toggle of ```Require Internet Connection``` for the Webhooks.
+    <div align="center">
+        <img src="ReadmeImages/settings_wh1.jpg" Width="300px" Width="Auto"/>
+    </div>
+
+7. Sign into your email account by entering your address and completing the OAuth
 
 8. Now you can start using Smail :D but if you want to change your Login data, you can do that in the ```Settings```
 
