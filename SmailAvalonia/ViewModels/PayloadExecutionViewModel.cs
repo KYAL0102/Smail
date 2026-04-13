@@ -126,7 +126,6 @@ public class PayloadExecutionViewModel: ViewModelBase
 
     private void HandleEmailContactStateUpdate(object? obj)
     {
-        Console.WriteLine("Update received!");
         if(obj is ContactSendStatus status)
         {
             Dispatcher.UIThread.Post(() => 

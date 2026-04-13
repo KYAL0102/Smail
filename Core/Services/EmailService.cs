@@ -65,7 +65,6 @@ public class EmailService
                         await Task.Delay(TimeSpan.FromMinutes(BATCH_DELAY_MIN));
                     }
 
-                    Console.WriteLine("Publishing status...");
                     Messenger.Publish(new Models.Message
                     {
                         Action = Globals.EmailContactStateUpdate,
