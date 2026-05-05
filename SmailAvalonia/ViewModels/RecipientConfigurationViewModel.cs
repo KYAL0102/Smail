@@ -154,9 +154,16 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
 
     private async Task LoadFromSourceAsync()
     {
-        var list = await RecipientPoolBaseLoader.LoadFromSourceAsync(_securityVault.HttpsThumbprint);
-        list?
-            .ForEach(AllContacts.Add);
+        try
+        {
+            var list = await RecipientPoolBaseLoader.LoadFromSourceAsync(_securityVault.HttpsThumbprint);
+            list?
+                .ForEach(AllContacts.Add);
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+        }
 
         SetLastBatchAsCurrent();
     }

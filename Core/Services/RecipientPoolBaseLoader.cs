@@ -38,8 +38,9 @@ public static class RecipientPoolBaseLoader
     public static async Task<List<Contact>> GetFromFileAsync(string filePath)
     {
         var ext = Path.GetExtension(filePath);
-    
-        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+        var data = await File.ReadAllBytesAsync(filePath);
+        using var stream = new MemoryStream(data);
 
         return await ImportController.FileContentToContactListAsync(stream, ext);
     }

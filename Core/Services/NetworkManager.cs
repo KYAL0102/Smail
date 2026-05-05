@@ -57,8 +57,8 @@ public static class NetworkManager
                     Name = dto.Name ?? string.Empty,
                     
                     // Validate if present, otherwise empty
-                    MobileNumber = !string.IsNullOrEmpty(dto.MobileNumber) && FormatChecker.IsValidMobile(dto.MobileNumber) 
-                                ? dto.MobileNumber 
+                    MobileNumber = !string.IsNullOrEmpty(dto.MobileNumber) && FormatChecker.IsValidMobile(dto.MobileNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "")) 
+                                ? dto.MobileNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "")
                                 : string.Empty,
                     
                     Email = !string.IsNullOrEmpty(dto.Email) && FormatChecker.IsValidEmail(dto.Email) 

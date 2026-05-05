@@ -20,8 +20,8 @@ public static class ImportController
     {
         return extension.ToLower() switch
         {
-            ".csv" => await ReadFromCsvContentAsync(stream, hasHeader),
-            ".xlsx" or ".xls" => ReadFromXlsxContent(stream, hasHeader),
+            ".csv" => await Task.Run(() => ReadFromCsvContentAsync(stream, hasHeader)),
+            ".xlsx" or ".xls" => await Task.Run(() => ReadFromXlsxContent(stream, hasHeader)),
             _ => []
         };
     }
@@ -36,7 +36,7 @@ public static class ImportController
             PrepareHeaderForMatch = args => args.Header.Replace(" ", "").ToLower()
         };
 
-        using var reader = new StreamReader(stream);
+        using var reader = new StreamReader(stream, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         using var csv = new CsvReader(reader, config);
 
         var contacts = new List<Contact>();
@@ -47,12 +47,19 @@ public static class ImportController
             csv.ReadHeader();
         }
 
-        while (await csv.ReadAsync())
+        try 
         {
-            var contact = MapToContact(headerName => 
-                hasHeader ? csv.GetField(headerName) : GetFieldByIndex(csv, headerName));
+            while (await csv.ReadAsync())
+            {
+                var contact = MapToContact(headerName => 
+                    hasHeader ? csv.GetField(headerName) : GetFieldByIndex(csv, headerName));
 
-            if (contact != null) contacts.Add(contact);
+                if (contact != null) contacts.Add(contact);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw;
         }
 
         return contacts;
@@ -91,7 +98,11 @@ public static class ImportController
         var name = getValue("Name");
         if (string.IsNullOrWhiteSpace(name)) return null;
 
-        var mobile = getValue("MobileNumber") ?? string.Empty;
+        var mobile = (getValue("MobileNumber") ?? string.Empty)
+                        .Replace(" ", "")
+                        .Replace("-", "")
+                        .Replace("(", "")
+                        .Replace(")", "");
         var email = getValue("Email") ?? string.Empty;
         var rawPref = getValue("ContactPreference") ?? string.Empty;
 
