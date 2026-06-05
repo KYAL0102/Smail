@@ -22,7 +22,8 @@ public class SecurityVault : IDisposable
 
     public string SmsGatewayUsername { get; private set; } = string.Empty;
 
-    public string HttpsThumbprint { get; set; } = string.Empty;
+    public Dictionary<string, string> StoredApiResults = [];
+    public string ApiKey { get; set; } = string.Empty;
     private string _recipientBasePath = string.Empty;
     public string RecipientBasePath 
     { 
@@ -62,7 +63,8 @@ public class SecurityVault : IDisposable
             WhSigningKey = SecureStringToString(_whSigningKey) ?? string.Empty,
             GatewayUsername = SmsGatewayUsername,
             GatewayPassword = SecureStringToString(_gatewayPassword) ?? string.Empty,
-            HttpsThumbprint = HttpsThumbprint,
+            StoredApiResults = StoredApiResults,
+            ApiKey = ApiKey,
             RecipientBasePath = RecipientBasePath,
             PrimaryTransmissiontype = (int) PrimaryTransmissionType,
             StrategyKey = (int) StrategyKey,
@@ -96,7 +98,8 @@ public class SecurityVault : IDisposable
                 _whSigningKey = StringToSecureString(data.WhSigningKey);
                 SmsGatewayUsername = data.GatewayUsername ?? SmsGatewayUsername;
                 _gatewayPassword = StringToSecureString(data.GatewayPassword);
-                HttpsThumbprint = data.HttpsThumbprint;
+                StoredApiResults = data.StoredApiResults;
+                ApiKey = data.ApiKey ?? string.Empty;
                 RecipientBasePath = data.RecipientBasePath ?? RecipientBasePath;
                 PrimaryTransmissionType = (TransmissionType)(data.PrimaryTransmissiontype ?? (int)PrimaryTransmissionType);
                 StrategyKey = (TransmissionStrategyKey) (data.StrategyKey ?? (int)StrategyKey);

@@ -20,7 +20,7 @@ public static class ImportController
     {
         return extension.ToLower() switch
         {
-            ".csv" => await Task.Run(() => ReadFromCsvContentAsync(stream, hasHeader)),
+            ".csv" => await ReadFromCsvContentAsync(stream, hasHeader),
             ".xlsx" or ".xls" => await Task.Run(() => ReadFromXlsxContent(stream, hasHeader)),
             _ => []
         };
@@ -67,6 +67,8 @@ public static class ImportController
 
     public static List<Contact> ReadFromXlsxContent(Stream stream, bool hasHeader)
     {
+        if (stream.CanSeek) stream.Position = 0;
+
         using var workbook = new XLWorkbook(stream);
         var ws = workbook.Worksheets.First();
         var rows = ws.RowsUsed();

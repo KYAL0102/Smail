@@ -11,7 +11,7 @@ public static class PayloadFactory
         payload.PrimaryTransmissionType = securityVault.PrimaryTransmissionType;
         payload.StrategyKey = securityVault.StrategyKey;
 
-        var recipientPool = (await RecipientPoolBaseLoader.LoadFromSourceAsync(securityVault.HttpsThumbprint)) ?? [];
+        var recipientPool = (await RecipientPoolBaseLoader.LoadFromSourceAsync(securityVault)) ?? [];
 
         foreach(var recipient in recipientPool)
         {

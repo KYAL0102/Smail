@@ -50,6 +50,17 @@ public class DataSettingsViewModel : ViewModelBase
         }
     }
 
+    private string _apiKeyInput = string.Empty;
+    public string ApiKeyInput
+    {
+        get => _apiKeyInput;
+        set
+        {
+            _apiKeyInput = value;
+            OnPropertyChanged();
+        }
+    }
+
     private string _dataSrcErrMsg = string.Empty;
     public string DataSrcErrorMsg
     {
@@ -74,6 +85,7 @@ public class DataSettingsViewModel : ViewModelBase
         _securityVault = App.ServiceProvider.GetRequiredService<SecurityVault>();
 
         DataSourcePathInput = _securityVault.RecipientBasePath;
+        ApiKeyInput = _securityVault.ApiKey;
 
         EditSourcePathCommand = new
         (
@@ -173,8 +185,7 @@ public class DataSettingsViewModel : ViewModelBase
         }
         else if (!string.IsNullOrEmpty(DataSourcePathInput))
         {
-            //TODO: Implement Thumbprint logic
-            (bool success, string reason) = await NetworkManager.VerifySourceAsync(DataSourcePathInput);
+            (bool success, string reason) = await NetworkManager.VerifySourceAsync(DataSourcePathInput, ApiKeyInput);
 
             if(!success)
             {
@@ -184,6 +195,7 @@ public class DataSettingsViewModel : ViewModelBase
             }
         }
 
+        _securityVault.ApiKey = ApiKeyInput;
         _securityVault.RecipientBasePath = DataSourcePathInput;
         await _securityVault.SaveToFileAsync();
     }

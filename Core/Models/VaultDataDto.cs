@@ -16,8 +16,11 @@ public class VaultDataDto
     [JsonPropertyName("gatewaypwd")]
     public string? GatewayPassword { get; set; }
 
+    [JsonPropertyName("storedapiresults")]
+    public Dictionary<string, string> StoredApiResults { get; set; } = [];
+
     [JsonPropertyName("httpthumbstring")]
-    public string? HttpsThumbprint { get; set; }
+    public string? ApiKey { get; set; }
 
     [JsonPropertyName("recipientbasepath")]
     public string? RecipientBasePath { get; set; }

@@ -156,7 +156,7 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
     {
         try
         {
-            var list = await RecipientPoolBaseLoader.LoadFromSourceAsync(_securityVault.HttpsThumbprint);
+            var list = await RecipientPoolBaseLoader.LoadFromSourceAsync(_securityVault);
             list?
                 .ForEach(AllContacts.Add);
         }
@@ -279,7 +279,7 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
             if (files.Count >= 1)
             {
                 // Open reading stream from the first file.
-                var filePath = files[0].Path.AbsolutePath;
+                var filePath = files[0].Path.LocalPath;
                 var list = await RecipientPoolBaseLoader.GetFromFileAsync(filePath);
 
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => 
@@ -315,7 +315,7 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
             if (hasName && hasMobile && hasEmail && hasCountry && hasRegion && hasPref && hasSent && hasPayed) break;
         }
 
-        DataGridLength GetWidth(bool v) => v ? new DataGridLength(1, DataGridLengthUnitType.Star) : new DataGridLength(0);
+        DataGridLength GetWidth(bool v) => v ? new DataGridLength(1, DataGridLengthUnitType.Star) : DataGridLength.Auto;
 
         NameColumnWidth = GetWidth(hasName);
         MobileColumnWidth = GetWidth(hasMobile);

@@ -20,43 +20,37 @@ namespace Core.Services;
 
 public static class NetworkManager
 {
-    public static async Task<List<Contact>> FetchFromUriAsync(string uri, string expectedThumbprint)
+    public static async Task<List<Contact>> FetchFromUriAsync(string uri, string apiKey)
     {
+        // 🔓 Bypasses ALL SSL validation checks to trust the connection unconditionally
         var handler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
-            {
-                if (errors == System.Net.Security.SslPolicyErrors.None) return true;
-
-                return cert?.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256) == expectedThumbprint;
-            }
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         };
 
         using var client = new HttpClient(handler);
 
-        try
+        // 🔑 Inject your production API key into the headers
+        if (!string.IsNullOrEmpty(apiKey))
         {
-            var options = new JsonSerializerOptions
+            client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+        }
+
+        var options = new JsonSerializerOptions
             {
-                // This handles different casing (e.g., "email" vs "Email")
                 PropertyNameCaseInsensitive = true,
-                // This allows us to map the string "Whatsapp" directly to an Enum if needed
                 Converters = { new JsonStringEnumConverter() }
             };
 
-            // Deserializes whatever properties match; the rest stay null.
             var rawData = await client.GetFromJsonAsync<List<ParticipantDto>>(uri, options);
 
             if (rawData == null) return [];
 
-            // Apply your domain logic and validation, similar to your ReadFromCsvContentAsync
             return rawData
                 .Select(dto => new Contact
                 {
-                    // Use null-coalescing (??) to handle missing properties
                     Name = dto.Name ?? string.Empty,
                     
-                    // Validate if present, otherwise empty
                     MobileNumber = !string.IsNullOrEmpty(dto.MobileNumber) && FormatChecker.IsValidMobile(dto.MobileNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "")) 
                                 ? dto.MobileNumber.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "")
                                 : string.Empty,
@@ -73,21 +67,12 @@ public static class NetworkManager
 
                     HomeRegion = dto.HomeRegion ?? "Unknown",
 
-                    // Handle the Enum conversion for TransmissionType
                     ContactPreference = Enum.TryParse<TransmissionType>(dto.TransmissionType, true, out var pref) 
                                         ? pref 
                                         : TransmissionType.NONE
                 })
-                // Maintain your requirement: Name must exist
                 .Where(c => !string.IsNullOrWhiteSpace(c.Name))
                 .ToList();
-        }
-        catch (Exception ex)
-        {
-            // Log the error (consider using a logging service here)
-            Console.WriteLine($"Error fetching data: {ex.Message} - {ex.StackTrace}");
-            return [];
-        }
     }
 
     /// <summary>
@@ -107,57 +92,42 @@ public static class NetworkManager
         public string? TransmissionType { get; set; }
     }
 
-    private static string? _capturedThumbprint = null;
-    public static async Task<(bool Success, string Message)> VerifySourceAsync(string path, string? expectedThumbprint = null)
+    public static async Task<(bool Success, string Message)> VerifySourceAsync(string path, string? apiKey = null)
     {
         // Case 1: It's a Web URL
-        if (path.StartsWith("http"))
+        if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             try
             {
                 var handler = new HttpClientHandler
                 {
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
-                    {
-                        _capturedThumbprint = cert?.GetCertHashString();
-
-                        if (string.IsNullOrEmpty(expectedThumbprint))
-                            return sslPolicyErrors == System.Net.Security.SslPolicyErrors.None;
-
-                        var cleanExpected = expectedThumbprint.Replace(" ", "").Replace(":", "").ToUpper();
-                        var actualThumbprint = cert?.GetCertHashString()?.ToUpper();
-
-                        return cleanExpected == actualThumbprint;
-                    }
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
                 };
+
                 using var client = new HttpClient(handler);
-                // Set a short timeout so the UI doesn't hang forever
                 client.Timeout = TimeSpan.FromSeconds(5); 
 
-                var request = new HttpRequestMessage(HttpMethod.Head, path);
-                var response = await client.SendAsync(request);
+                // 1. Change HttpMethod.Head to HttpMethod.Get 🛠️
+                var request = new HttpRequestMessage(HttpMethod.Get, path);
+                
+                if (!string.IsNullOrEmpty(apiKey))
+                {
+                    request.Headers.Add("X-Api-Key", apiKey);
+                }
+
+                // 2. Use ResponseHeadersRead so it returns immediately after getting the status code ⚡
+                var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                 
                 if (!response.IsSuccessStatusCode)
-                    return (false, $"Server returned error: {response.StatusCode}");
+                    return (false, $"Server returned error: {response.StatusCode} ({(int)response.StatusCode})");
 
-                // Verify content type (optional but helpful)
                 var contentType = response.Content.Headers.ContentType?.MediaType;
-                if (contentType != "application/json" && !path.EndsWith(".csv"))
+                if (contentType != "application/json" && !path.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                 {
-                    // You can warn them, but maybe proceed anyway
                     return (true, "Warning: Response format might not be standard JSON/CSV.");
                 }
                 
                 return (true, "URL is reachable.");
-            }
-            catch (HttpRequestException ex) 
-            { 
-                if(_capturedThumbprint != null)
-                {
-                    //TODO: Ask user if he wants to trust this thumbprint
-                    return (false, $"{ex.Message}");
-                }
-                else return (false, $"URL unreachable: {ex.Message}"); 
             }
             catch (Exception ex) 
             { 
@@ -166,13 +136,10 @@ public static class NetworkManager
         }
 
         // Case 2: It's a Local File
-        else
-        {
-            if (File.Exists(path))
-                return (true, "File found.");
-            else
-                return (false, "File does not exist at the specified path.");
-        }
+        if (File.Exists(path))
+            return (true, "File found.");
+            
+        return (false, "File does not exist at the specified path.");
     }
 
     // ----------------------------------------------------------------------
