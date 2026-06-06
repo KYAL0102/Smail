@@ -28,7 +28,10 @@ public static class NetworkManager
             ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         };
 
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
 
         // 🔑 Inject your production API key into the headers
         if (!string.IsNullOrEmpty(apiKey))

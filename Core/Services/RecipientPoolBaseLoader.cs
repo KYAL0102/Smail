@@ -33,17 +33,19 @@ public static class RecipientPoolBaseLoader
         }
         else if (type == DataSourceType.URI)
         {
+            Console.WriteLine("Source is an URI");
             try
             {
                 list = await NetworkManager.FetchFromUriAsync(PoolSourcePath, securityVault.ApiKey);
                 await SaveApiResultInFile(list, securityVault);
             }
-            catch(Exception)
+            catch(Exception e)
             {
+                Console.WriteLine($"Exception caught: {e.GetType()}");
                 try
                 {
-                    var path = securityVault.StoredApiResults[PoolSourcePath];
-                    list = await GetFromFileAsync(path);
+                    var fileName = securityVault.StoredApiResults[PoolSourcePath];
+                    list = await GetFromFileAsync(Path.Combine(Folder, fileName));
                 }
                 catch(Exception ex)
                 {
@@ -69,8 +71,9 @@ public static class RecipientPoolBaseLoader
     {
         if(contacts.Count == 0) return;
 
+        Console.WriteLine("Saving list in file...");
         string fileName;
-        if(securityVault.StoredApiResults.Keys.Any(k => k == PoolSourcePath)) 
+        if(securityVault.StoredApiResults.Keys.Contains(PoolSourcePath)) 
             fileName = securityVault.StoredApiResults[PoolSourcePath];
         else
             fileName = $"{GenerateRandomFileName()}.csv";
@@ -80,7 +83,8 @@ public static class RecipientPoolBaseLoader
         await SaveToCsvAsync<Contact>(contacts, filePath);
         Console.WriteLine($"Saved {contacts.Count} entries under '{filePath}'!");
 
-        securityVault.StoredApiResults.Add(PoolSourcePath, fileName);
+        if(!securityVault.StoredApiResults.Keys.Contains(PoolSourcePath))
+            securityVault.StoredApiResults.Add(PoolSourcePath, fileName);
         await securityVault.SaveToFileAsync();
     }
 
