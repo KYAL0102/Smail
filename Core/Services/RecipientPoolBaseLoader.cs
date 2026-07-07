@@ -59,6 +59,7 @@ public static class RecipientPoolBaseLoader
 
     public static async Task<List<Contact>> GetFromFileAsync(string filePath)
     {
+        Console.WriteLine("Fetching type from path...");
         var ext = Path.GetExtension(filePath);
 
         var data = await File.ReadAllBytesAsync(filePath);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
@@ -190,6 +191,19 @@ public class PayloadSummaryViewModel: ViewModelBase
 
     public void StartPayloadExecution()
     {
+        if (_session.Payload?.ContactPool == null) return;
+
+        // 1. Separate by type, deduplicate each group, and flatten back into a sequence
+        var deduplicatedPool = _session.Payload.ContactPool
+            .GroupBy(kvp => kvp.Value)
+            .SelectMany(group => group.Key == TransmissionType.SMS 
+                ? group.DistinctBy(kvp => kvp.Key.MobileNumber)
+                : group.DistinctBy(kvp => kvp.Key.Email))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+        // 2. Assign the cleaned dictionary back
+        _session.Payload.ContactPool = deduplicatedPool;
+
         Messenger.Publish(new Message
         {
             Action = Globals.NavigateToExecutionAction
@@ -205,21 +219,29 @@ public class PayloadSummaryViewModel: ViewModelBase
 
     private void EvaluateAmountOfTransmissionTypes()
     {
-        var smsCount = 0;
-        var emailCount = 0;
-
         var strategy = SelectedStrategy?.Key ?? -1;
         var primary = SelectedChannel?.TransmissionType ?? TransmissionType.NONE;
 
-        if (_session.Payload != null && strategy != -1 && primary != TransmissionType.NONE)
+        // Guard clause to exit early and keep nesting shallow
+        if (_session.Payload == null || strategy == -1 || primary == TransmissionType.NONE)
         {
-            ApplyLogicToContactList(strategy, primary);
-            smsCount = _session.Payload.ContactPool.Count(c => c.Value == TransmissionType.SMS);
-            emailCount = _session.Payload.ContactPool.Count(c => c.Value == TransmissionType.Email);
+            SmsContactsAmount = 0;
+            EmailContactsAmount = 0;
+            return;
         }
-        
-        SmsContactsAmount = smsCount;
-        EmailContactsAmount = emailCount;
+
+        ApplyLogicToContactList(strategy, primary);
+
+        // Filter first, then deduplicate only the relevant subset
+        SmsContactsAmount = _session.Payload.ContactPool
+            .Where(kvp => kvp.Value == TransmissionType.SMS)
+            .DistinctBy(kvp => kvp.Key.MobileNumber)
+            .Count();
+
+        EmailContactsAmount = _session.Payload.ContactPool
+            .Where(kvp => kvp.Value == TransmissionType.Email)
+            .DistinctBy(kvp => kvp.Key.Email)
+            .Count();
     }
 
     private void ApplyLogicToContactList(int strategy, TransmissionType primary)

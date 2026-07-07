@@ -13,6 +13,9 @@ namespace Core.Services;
 
 public class SmsService
 {
+    private const int DefaultBatchSize = 25;
+    private const int DefaultDelayBetweenBatchesMs = 250;
+
     private readonly SecurityVault _securityVault;
     private string _authToken = string.Empty;
     public string DeviceIP { get; private set; }
@@ -176,7 +179,35 @@ public class SmsService
         await Task.WhenAll(tasks);
     }
 
-    public async Task<List<Recipient>> SendMessageAsync(string subject, string message, string[] numbers)
+    public static IReadOnlyList<string[]> SplitIntoBatches(string[] numbers, int batchSize)
+    {
+        if (numbers == null || numbers.Length == 0)
+        {
+            return [];
+        }
+
+        if (batchSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(batchSize));
+        }
+
+        var batches = new List<string[]>();
+        for (var index = 0; index < numbers.Length; index += batchSize)
+        {
+            var batch = numbers.Skip(index).Take(batchSize).ToArray();
+            batches.Add(batch);
+        }
+
+        return batches;
+    }
+
+    public async Task<List<Recipient>> SendMessageAsync(
+        string subject,
+        string message,
+        string[] numbers,
+        int batchSize = DefaultBatchSize,
+        int delayBetweenBatchesMs = DefaultDelayBetweenBatchesMs,
+        Action<IReadOnlyList<Recipient>>? onBatchCompleted = null)
     {
         var url = $"http://{DeviceIP}:{Port}/message";
         if(!string.IsNullOrEmpty(subject))  message = $"{subject}{Environment.NewLine}{Environment.NewLine}{message}";
@@ -185,36 +216,53 @@ public class SmsService
 
         var isEncrypted = !string.IsNullOrEmpty(aesPassphraseAccessor?.Value ?? string.Empty);
         var encryptor = new AesEncryptor(aesPassphraseAccessor?.Value ?? string.Empty);
-        if(isEncrypted)
+
+        var batches = SplitIntoBatches(numbers, batchSize);
+        var recipients = new List<Recipient>();
+
+        for (var index = 0; index < batches.Count; index++)
         {
-            message = encryptor.EncryptSMS(message);
-            numbers = [.. numbers.Select(n => encryptor.EncryptSMS(n))];
-        }
+            var batchNumbers = batches[index];
+            var payloadNumbers = isEncrypted
+                ? [.. batchNumbers.Select(n => encryptor.EncryptSMS(n))]
+                : batchNumbers;
 
-        var payload = new SendMessageSchema
-        {
-            TextMessage = new TextMessage{ Text = message },
-            PhoneNumbers = numbers,
-            IsEncrypted = isEncrypted
-        };
-
-        var json = JsonSerializer.Serialize(payload);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        // Send the POST request
-        var response = await _httpClient.PostAsync(url, content);
-
-        // Output response
-        string responseString = await response.Content.ReadAsStringAsync();
-        var responseObj = JsonSerializer.Deserialize<SendMessageResponse>(responseString);
-
-        var recipients = responseObj!.Recipients;
-        if(isEncrypted)
-        {
-            foreach(var r in recipients)
+            var payload = new SendMessageSchema
             {
-                var encryptedNumber = r.PhoneNumber;
-                r.PhoneNumber = encryptor.DecryptSMS(r.PhoneNumber);
+                TextMessage = new TextMessage{ Text = message },
+                PhoneNumbers = payloadNumbers,
+                IsEncrypted = isEncrypted
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(url, content);
+            var responseString = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"SMS batch {index + 1}/{batches.Count} failed: {(int)response.StatusCode} {response.ReasonPhrase}");
+                Console.WriteLine(responseString);
+                continue;
+            }
+
+            var responseObj = JsonSerializer.Deserialize<SendMessageResponse>(responseString);
+            var batchRecipients = responseObj?.Recipients ?? [];
+            if(isEncrypted)
+            {
+                foreach(var r in batchRecipients)
+                {
+                    r.PhoneNumber = encryptor.DecryptSMS(r.PhoneNumber);
+                }
+            }
+
+            recipients.AddRange(batchRecipients);
+            onBatchCompleted?.Invoke(batchRecipients);
+
+            if (index < batches.Count - 1 && delayBetweenBatchesMs > 0)
+            {
+                await Task.Delay(delayBetweenBatchesMs);
             }
         }
 

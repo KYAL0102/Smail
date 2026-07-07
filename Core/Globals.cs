@@ -14,4 +14,5 @@ public static class Globals
     public static string NewRecepientPoolBaseSourcePath { get; } = "sourcePathChanged";
     public static string ManualInputRequired { get; } = "manualInputRequired";
     public static string EmailContactStateUpdate { get; } = "emailContactStateUpdate";
+    public static string SmsContactStateUpdate { get; } = "smsContactStateUpdate";
 }

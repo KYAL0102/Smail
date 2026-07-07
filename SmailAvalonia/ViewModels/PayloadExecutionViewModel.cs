@@ -46,6 +46,7 @@ public class PayloadExecutionViewModel: ViewModelBase
     public async Task ExecuteMessages()
     {
         Messenger.Subscribe(Globals.EmailContactStateUpdate, msg => HandleEmailContactStateUpdate(msg.Data));
+        Messenger.Subscribe(Globals.SmsContactStateUpdate, msg => HandleSmsContactStateUpdate(msg.Data));
         RegisterToWebsocketEvent();
 
         var emailContacts = _payload.ContactPool
@@ -56,7 +57,7 @@ public class PayloadExecutionViewModel: ViewModelBase
         
         var smsContacts = _payload.ContactPool
             .Where(kvp => kvp.Value == TransmissionType.SMS)
-            .Select(kvp => kvp.Key.MobileNumber)
+            .Select(kvp => kvp.Key)
             .Distinct()
             .ToList();
         
@@ -76,30 +77,58 @@ public class PayloadExecutionViewModel: ViewModelBase
         }
     }
 
-    private async Task SendSms(string subject, string message, List<string> recipients)
+    private async Task SendSms(string subject, string message, List<Contact> contacts)
     {
         if (_smsService != null)
         {
-            var smsRecipients = await _smsService.SendMessageAsync(subject, message, [.. recipients]);
-
-            var results = smsRecipients
-            .Select(r => {
-                Enum.TryParse<SendStatus>(r.State, true, out var status);
-                var contact = _payload.ContactPool.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
-                return contact is null ? null : new ContactSendStatus {
+            contacts
+                .Select(contact => new ContactSendStatus
+                {
                     TransmissionType = TransmissionType.SMS,
                     Contact = contact,
-                    Status = status
-                };
-            })
-            .Where(x => x != null)!
-            .ToList();
+                    Status = SendStatus.PENDING
+                })
+                .ToList()
+                .ForEach(SmsContactStates.Add);
 
-            Dispatcher.UIThread.Post(() => {
-                foreach (var res in results) {
-                    if(res != null) SmsContactStates.Add(res);
-                }
-            });
+            await _smsService.SendMessageAsync(
+                subject,
+                message,
+                [.. contacts.Select(c => c.MobileNumber)],
+                batchSize: 25,
+                delayBetweenBatchesMs: 250,
+                onBatchCompleted: batchRecipients =>
+                {
+                    var results = batchRecipients
+                        .Select(r => {
+                            Enum.TryParse<SendStatus>(r.State, true, out var status);
+                            var contact = _payload.ContactPool.Keys.SingleOrDefault(c => c.MobileNumber == r.PhoneNumber);
+                            return contact is null ? null : new ContactSendStatus {
+                                TransmissionType = TransmissionType.SMS,
+                                Contact = contact,
+                                Status = status
+                            };
+                        })
+                        .Where(x => x != null)!
+                        .ToList();
+
+                    Dispatcher.UIThread.Post(() => {
+                        foreach (var res in results)
+                        {
+                            if (res == null) continue;
+
+                            var existing = SmsContactStates.SingleOrDefault(state => state.Contact == res.Contact);
+                            if (existing == null)
+                            {
+                                SmsContactStates.Add(res);
+                            }
+                            else
+                            {
+                                existing.Status = res.Status;
+                            }
+                        }
+                    });
+                });
         }
         else Console.WriteLine("Could not send SMS (SmsService was null)!");
     }
@@ -122,6 +151,19 @@ public class PayloadExecutionViewModel: ViewModelBase
             Console.WriteLine("All emails sent!");
         }
         else Console.WriteLine("Could not send Emails (EmailService was null.)");
+    }
+
+    private void HandleSmsContactStateUpdate(object? obj)
+    {
+        if(obj is ContactSendStatus status)
+        {
+            Dispatcher.UIThread.Post(() => 
+            {
+                var item = SmsContactStates.SingleOrDefault(cs => cs.Contact == status.Contact);
+                if(item != null) item.Status = status.Status;
+                else Console.WriteLine($"Could not find item in list of smsContactstates!");
+            });
+        }
     }
 
     private void HandleEmailContactStateUpdate(object? obj)

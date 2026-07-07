@@ -248,6 +248,7 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
 
     public async Task PickFileAsync()
     {
+        Console.WriteLine("Picking a file...");
         try
         {
             var topLevel = TopLevel.GetTopLevel(_userControl);
@@ -278,6 +279,7 @@ public partial class RecipientConfigurationViewModel: ViewModelBase
 
             if (files.Count >= 1)
             {
+                Console.WriteLine("File picked.");
                 // Open reading stream from the first file.
                 var filePath = files[0].Path.LocalPath;
                 var list = await RecipientPoolBaseLoader.GetFromFileAsync(filePath);

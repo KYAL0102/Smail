@@ -169,6 +169,13 @@ public class SettingsViewModel : ViewModelBase
 
     public async Task OnUnloadAsync()
     {
-        if(SmsInput != null) await SmsInput.AwaitAllTasksAsync();
+        try
+        {
+            if(SmsInput != null) await SmsInput.AwaitAllTasksAsync();
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
+        }
     }
 }

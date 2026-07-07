@@ -8,6 +8,7 @@ using ClosedXML.Excel;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Core.Models;
+using CsvHelper.Configuration.Attributes;
 
 namespace Core;
 
@@ -28,6 +29,7 @@ public static class ImportController
 
     public static async Task<List<Contact>> ReadFromCsvContentAsync(Stream stream, bool hasHeader)
     {
+        Console.WriteLine("Reading from csv...");
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = hasHeader,
@@ -59,6 +61,7 @@ public static class ImportController
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"{ex.Message} - {ex.StackTrace}");
             throw;
         }
 
